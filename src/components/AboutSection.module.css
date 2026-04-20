@@ -1,0 +1,114 @@
+/* ============================================
+   AHARYA – About Section
+   ============================================ */
+
+.section {
+  padding: var(--space-16) 0;
+  background: var(--color-white);
+  position: relative;
+  overflow: hidden;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+  align-items: center;
+}
+
+.imageCol {
+  position: relative;
+}
+
+.imageWrap {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  aspect-ratio: 4/5;
+  position: relative;
+  z-index: 2;
+}
+
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bgBlob {
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background: var(--color-gold-pale);
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  z-index: 1;
+}
+
+.textCol {
+  padding-right: var(--space-8);
+  position: relative;
+  z-index: 2;
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-gold);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 500;
+  color: var(--color-dark);
+  margin-bottom: var(--space-6);
+  line-height: 1.1;
+}
+
+.desc {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  color: var(--color-gray-700);
+  line-height: 1.8;
+  margin-bottom: var(--space-6);
+}
+
+.signature {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-style: italic;
+  color: var(--color-gold-dark);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  .textCol {
+    padding-right: 0;
+    text-align: center;
+  }
+  .title {
+    font-size: 2.5rem;
+  }
+  .imageWrap {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 2rem;
+  }
+  .desc {
+    font-size: 1rem;
+  }
+}

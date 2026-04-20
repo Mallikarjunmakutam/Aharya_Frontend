@@ -1,0 +1,199 @@
+/* ============================================
+   AHARYA – Footer Styles
+   ============================================ */
+
+.footer {
+  background: var(--color-dark);
+  color: var(--color-gray-300);
+  padding: var(--space-20) 0 0;
+}
+
+.footerGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
+/* Brand */
+.brandCol {}
+
+.footerLogo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.footerLogoImg {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(10deg);
+}
+
+.footerLogoName {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.footerDesc {
+  font-size: 0.88rem;
+  line-height: 1.8;
+  color: var(--color-gray-500);
+  max-width: 260px;
+  margin-bottom: var(--space-6);
+}
+
+.socialRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.socialBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-400);
+  transition: all var(--duration-normal) var(--ease);
+  font-size: 0.8rem;
+}
+
+.socialBtn:hover {
+  background: var(--color-gold);
+  color: white;
+  border-color: var(--color-gold);
+  transform: translateY(-2px);
+}
+
+/* Link Columns */
+.colTitle {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  margin-bottom: var(--space-5);
+}
+
+.colLinks {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.colLinks a {
+  font-size: 0.88rem;
+  color: var(--color-gray-500);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease);
+  cursor: pointer;
+}
+
+.colLinks a:hover {
+  color: white;
+}
+
+/* Newsletter */
+.newsletterTitle {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  margin-bottom: var(--space-3);
+}
+
+.newsletterText {
+  font-size: 0.85rem;
+  color: var(--color-gray-500);
+  line-height: 1.7;
+  margin-bottom: var(--space-4);
+}
+
+.newsletterForm {
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.newsletterInput {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255,255,255,0.05);
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: white;
+}
+
+.newsletterInput::placeholder { color: rgba(255,255,255,0.3); }
+
+.newsletterBtn {
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-gold);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background var(--duration-normal) var(--ease);
+}
+
+.newsletterBtn:hover { background: var(--color-gold-dark); }
+
+/* Bottom bar */
+.footerBottom {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: var(--space-6) 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copyright {
+  font-size: 0.78rem;
+  color: var(--color-gray-600);
+}
+
+.bottomLinks {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.bottomLinks a {
+  font-size: 0.78rem;
+  color: var(--color-gray-600);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.bottomLinks a:hover { color: var(--color-gold); }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .footerGrid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .footerGrid { grid-template-columns: 1fr; gap: var(--space-8); }
+  .footerBottom { flex-direction: column; gap: var(--space-3); text-align: center; }
+}

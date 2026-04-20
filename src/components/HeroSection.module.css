@@ -1,0 +1,239 @@
+/* ============================================
+   AHARYA – Hero Section
+   ============================================ */
+
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding-top: var(--header-height);
+  overflow: hidden;
+  background-color: var(--color-cream);
+}
+
+.heroBg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at top right, rgba(200, 168, 75, 0.08) 0%, transparent 60%),
+              radial-gradient(circle at bottom left, rgba(200, 168, 75, 0.05) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+  position: relative;
+  z-index: 2;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+  align-items: center;
+}
+
+.textCol {
+  padding-right: var(--space-6);
+}
+
+.heroEyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-gold-dark);
+  margin-bottom: var(--space-6);
+}
+
+.eyebrowLine {
+  width: 40px;
+  height: 1px;
+  background-color: var(--color-gold);
+}
+
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 400;
+  color: var(--color-black);
+  line-height: 1.1;
+  margin-bottom: var(--space-6);
+  letter-spacing: -0.01em;
+}
+
+.heroTitle em {
+  font-style: italic;
+  color: var(--color-gold-dark);
+  padding-left: var(--space-4);
+}
+
+.heroDesc {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  color: var(--color-gray-700);
+  line-height: 1.7;
+  max-width: 460px;
+  margin-bottom: var(--space-8);
+}
+
+.ctaGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.primaryBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-8);
+  background: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--duration-normal) var(--ease);
+}
+
+.primaryBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.btnText {
+  position: relative;
+  z-index: 2;
+}
+
+.btnShine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(200, 168, 75, 0.4) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-25deg);
+  z-index: 1;
+  transition: all 0.7s var(--ease);
+}
+
+.primaryBtn:hover .btnShine {
+  left: 200%;
+}
+
+.secondaryBtn {
+  background: transparent;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-dark);
+  cursor: pointer;
+  position: relative;
+}
+
+.secondaryBtn::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background-color: var(--color-dark);
+  transform: scaleX(1);
+  transform-origin: left;
+  transition: transform var(--duration-normal) var(--ease);
+}
+
+.secondaryBtn:hover::after {
+  transform: scaleX(0);
+  transform-origin: right;
+}
+
+/* Image Column */
+.imageCol {
+  position: relative;
+  height: 80vh;
+  min-height: 600px;
+  padding: var(--space-4) 0;
+}
+
+.imageWrap {
+  width: 100%;
+  height: 100%;
+  border-radius: 200px 200px 0 0;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+}
+
+.heroImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.imageOverlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 30%;
+  background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .heroTitle { font-size: 3.5rem; }
+  .imageWrap { border-radius: 120px 120px 0 0; }
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  .hero {
+    padding-top: calc(var(--header-height) + var(--space-8));
+    align-items: flex-start;
+  }
+  .textCol {
+    padding-right: 0;
+    text-align: center;
+  }
+  .heroEyebrow, .ctaGroup {
+    justify-content: center;
+  }
+  .heroDesc {
+    margin: 0 auto var(--space-8);
+  }
+  .imageCol {
+    height: 60vh;
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroTitle { font-size: 2.8rem; }
+  .ctaGroup {
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+}

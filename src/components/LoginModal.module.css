@@ -1,0 +1,229 @@
+/* ============================================
+   AHARYA – Login Modal Styles
+   ============================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: white;
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-10) var(--space-8);
+  position: relative;
+  box-shadow: var(--shadow-lg);
+}
+
+.closeBtn {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-gray-100);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-600);
+  transition: all var(--duration-fast) var(--ease);
+}
+
+.closeBtn:hover {
+  background: var(--color-gray-200);
+  color: var(--color-dark);
+}
+
+.modalHead {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.modalLogo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: var(--space-3);
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--color-dark);
+  margin-bottom: var(--space-1);
+}
+
+.modalSub {
+  font-size: 0.8rem;
+  color: var(--color-gray-500);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-radius: var(--radius-full);
+  background: var(--color-gray-100);
+  padding: 4px;
+  margin-bottom: var(--space-8);
+}
+
+.tabBtn {
+  flex: 1;
+  padding: var(--space-3);
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease);
+  color: var(--color-gray-500);
+}
+
+.tabBtn.active {
+  background: var(--color-black);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gray-600);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--color-dark);
+  background: var(--color-off-white);
+  transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-gold);
+  background: white;
+  box-shadow: 0 0 0 3px var(--color-gold-pale);
+}
+
+.input::placeholder {
+  color: var(--color-gray-400);
+}
+
+.submitBtn {
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-black);
+  color: white;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease);
+  margin-top: var(--space-2);
+}
+
+.submitBtn:hover {
+  background: var(--color-gold);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-gold);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error {
+  background: #fff0f0;
+  color: #c0392b;
+  border: 1px solid #f5c6cb;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.success {
+  background: #f0fff4;
+  color: #1a6b3c;
+  border: 1px solid #b7ebd1;
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-gray-400);
+  font-size: 0.8rem;
+  margin: var(--space-2) 0;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-gray-200);
+}
+
+.terms {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+  text-align: center;
+  margin-top: var(--space-2);
+  line-height: 1.5;
+}
+
+.goldLink {
+  color: var(--color-gold-dark);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}

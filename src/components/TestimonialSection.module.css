@@ -1,0 +1,123 @@
+/* ============================================
+   AHARYA – Testimonial Section
+   ============================================ */
+
+.section {
+  padding: var(--space-12) 0;
+  background: var(--color-white);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-10);
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-gold);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--color-dark);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+}
+
+.card {
+  background: var(--color-off-white);
+  border-radius: var(--radius-md);
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  transition: all var(--duration-normal) var(--ease);
+  border: 1px solid transparent;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-gold-pale);
+  background: white;
+}
+
+.avatarWrap {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-4);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold-dark));
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid white;
+}
+
+.quote {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--color-dark);
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+
+.quote::before, .quote::after {
+  content: '"';
+  color: var(--color-gold);
+  font-family: serif;
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  color: var(--color-gold);
+  margin-bottom: var(--space-4);
+}
+
+.authorName {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.authorCity {
+  font-size: 0.8rem;
+  color: var(--color-gray-500);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .title {
+    font-size: 2rem;
+  }
+}
