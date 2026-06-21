@@ -1,10 +1,10 @@
 // ============================================================
-// AHARYA – Product Section with Filter & Grid
+// AHARYA – Product Section with Filter & Grid (API-based)
 // ============================================================
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
-import { products, categories } from '../data/products';
+import api from '../services/api';
 import s from './ProductSection.module.css';
 
 const HeartIcon = ({ filled }) => (
@@ -42,7 +42,9 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
     setTimeout(() => setAdded(false), 1800);
   };
 
-  const disc = Math.round((1 - product.price / product.originalPrice) * 100);
+  const disc = product.originalPrice && product.price 
+    ? Math.round((1 - product.price / product.originalPrice) * 100) 
+    : 0;
 
   return (
     <motion.div
@@ -56,7 +58,7 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
       onClick={() => onSelectProduct?.(product)}
     >
       <div className={s.imgWrap}>
-        <img src={product.image} alt={product.name} className={s.img} loading="lazy" />
+        <img src={product.image || '/assets/saree1.png'} alt={product.name} className={s.img} loading="lazy" />
 
         {product.badge && <span className={s.badge}>{product.badge}</span>}
 
@@ -78,8 +80,8 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
         <div className={s.productName}>{product.name}</div>
 
         <div className={s.ratingRow}>
-          <StarIcon /> {product.rating}
-          <span className={s.ratingCount}>({product.reviews} reviews)</span>
+          <StarIcon /> {product.rating || '0.0'}
+          <span className={s.ratingCount}>({product.reviews || 0} reviews)</span>
         </div>
 
         {product.colors?.length > 0 && (
@@ -91,9 +93,11 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
         )}
 
         <div className={s.priceRow}>
-          <span className={s.price}>₹{product.price.toLocaleString('en-IN')}</span>
-          <span className={s.originalPrice}>₹{product.originalPrice.toLocaleString('en-IN')}</span>
-          <span className={s.discount}>{disc}% off</span>
+          <span className={s.price}>₹{product.price?.toLocaleString('en-IN')}</span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <span className={s.originalPrice}>₹{product.originalPrice.toLocaleString('en-IN')}</span>
+          )}
+          {disc > 0 && <span className={s.discount}>{disc}% off</span>}
         </div>
 
         <button
@@ -108,16 +112,57 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
   );
 }
 
-export default function ProductSection({ searchQuery = '', onSelectProduct }) {
-  const [activeCategory, setActiveCategory] = useState('All');
+export default function ProductSection({ searchQuery = '', activeCategory = 'All', setActiveCategory, onSelectProduct }) {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(["All"]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          api.get('/products/'),
+          api.get('/products/categories/')
+        ]);
+
+        // Map backend product to frontend product format
+        const fetchedProducts = (prodRes.data.results || prodRes.data).map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category?.name || 'Uncategorized',
+          price: parseFloat(p.discount_price || p.price),
+          originalPrice: p.discount_price ? parseFloat(p.price) : null,
+          rating: parseFloat(p.rating) || 0,
+          reviews: p.total_reviews || 0,
+          image: p.main_image,
+          badge: p.is_featured ? 'Featured' : '',
+          item_code: p.item_code,
+          colors: [] // Default empty since backend doesn't provide colors in list view
+        }));
+
+        setProducts(fetchedProducts);
+
+        const fetchedCategories = ["All", ...(catRes.data.results || catRes.data).map(c => c.name)];
+        setCategories(fetchedCategories);
+      } catch (e) {
+        console.error("Failed to fetch products or categories", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const filtered = useMemo(() => {
     return products.filter(p => {
       const catMatch = activeCategory === 'All' || p.category === activeCategory;
-      const searchMatch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const searchMatch = !searchQuery || 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.item_code?.toLowerCase().includes(searchQuery.toLowerCase());
       return catMatch && searchMatch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, products]);
 
   return (
     <section id="products" className={s.section}>
@@ -154,18 +199,22 @@ export default function ProductSection({ searchQuery = '', onSelectProduct }) {
 
         {/* Grid */}
         <AnimatePresence mode="popLayout">
-          <motion.div className={s.grid} layout>
-            {filtered.length === 0 ? (
-              <div className={s.noResults}>
-                <div className={s.noResultsTitle}>No sarees found</div>
-                <div className={s.noResultsSub}>Try a different filter or search term.</div>
-              </div>
-            ) : (
-              filtered.map(product => (
-                <ProductCard key={product.id} product={product} searchQuery={searchQuery} onSelectProduct={onSelectProduct} />
-              ))
-            )}
-          </motion.div>
+          {loading ? (
+             <div className={s.noResults}>Loading products...</div>
+          ) : (
+            <motion.div className={s.grid} layout>
+              {filtered.length === 0 ? (
+                <div className={s.noResults}>
+                  <div className={s.noResultsTitle}>No sarees found</div>
+                  <div className={s.noResultsSub}>Try a different filter or search term.</div>
+                </div>
+              ) : (
+                filtered.map(product => (
+                  <ProductCard key={product.id} product={product} searchQuery={searchQuery} onSelectProduct={onSelectProduct} />
+                ))
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </section>

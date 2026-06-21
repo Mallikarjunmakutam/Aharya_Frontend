@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import api from '../services/api';
 import s from './ProductDetail.module.css';
 
 const HeartIcon = ({ filled }) => (
@@ -27,6 +28,9 @@ export default function ProductDetail({ product, onBack }) {
   const [added, setAdded] = useState(false);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || null);
   const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [detailProduct, setDetailProduct] = useState(null);
+  const [activeMedia, setActiveMedia] = useState(null);
 
   const handleAdd = () => {
     addToCart({ ...product, quantity, selectedColor });
@@ -34,11 +38,33 @@ export default function ProductDetail({ product, onBack }) {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const disc = Math.round((1 - product.price / product.originalPrice) * 100);
+  const disc = product.originalPrice && product.price 
+    ? Math.round((1 - product.price / product.originalPrice) * 100) 
+    : 0;
 
   useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/products/${product.id}/`);
+        setDetailProduct(res.data);
+        const mainImgObj = res.data.images?.find(img => img.is_main) || res.data.images?.[0];
+        if (mainImgObj) {
+          setActiveMedia({ type: 'image', url: mainImgObj.image });
+        } else {
+          setActiveMedia({ type: 'image', url: res.data.main_image || product.image });
+        }
+      } catch (err) {
+        console.error("Failed to fetch product details", err);
+        setDetailProduct(null);
+        setActiveMedia({ type: 'image', url: product.image });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
     window.scrollTo(0, 0);
-  }, []);
+  }, [product.id]);
 
   return (
     <motion.div 
@@ -56,22 +82,63 @@ export default function ProductDetail({ product, onBack }) {
           {/* Left: Images */}
           <div className={s.imageSection}>
             <div className={s.mainImageWrap}>
-              <img src={product.image} alt={product.name} className={s.mainImage} />
+              {activeMedia?.type === 'video' ? (
+                <video 
+                  src={activeMedia.url} 
+                  className={s.mainImage} 
+                  controls 
+                  autoPlay 
+                  playsInline 
+                />
+              ) : (
+                <img 
+                  src={activeMedia?.url || product.image} 
+                  alt={product.name} 
+                  className={s.mainImage} 
+                />
+              )}
               {product.badge && <span className={s.badge}>{product.badge}</span>}
             </div>
             <div className={s.thumbnailList}>
-              {/* Dummy thumbnails since we only have one real image */}
-              <img src={product.image} className={s.thumbnailActive} alt="thumb" />
-              <img src={product.image} className={s.thumbnail} style={{ filter: 'brightness(0.8)' }} alt="thumb" />
-              <img src={product.image} className={s.thumbnail} style={{ filter: 'brightness(0.6)' }} alt="thumb" />
+              {loading ? (
+                <img src={product.image} className={s.thumbnailActive} alt="thumb" />
+              ) : (
+                <>
+                  {detailProduct?.images?.map((img, idx) => (
+                    <img 
+                      key={img.id || idx}
+                      src={img.image} 
+                      className={activeMedia?.url === img.image ? s.thumbnailActive : s.thumbnail} 
+                      alt="thumb" 
+                      onClick={() => setActiveMedia({ type: 'image', url: img.image })}
+                    />
+                  ))}
+                  {detailProduct?.video && (
+                    <div 
+                      className={`${s.videoThumbWrap} ${activeMedia?.url === detailProduct.video ? s.thumbnailActive : s.thumbnail}`}
+                      onClick={() => setActiveMedia({ type: 'video', url: detailProduct.video })}
+                    >
+                      <video src={detailProduct.video} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div className={s.playOverlay}>▶</div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
           {/* Right: Details */}
           <div className={s.detailsSection}>
-            <div className={s.category}>{product.category}</div>
+            <div className={s.category}>{detailProduct?.category?.name || product.category}</div>
             <h1 className={s.title}>{product.name}</h1>
             
+            <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <span className={s.itemCodeLabel}>Item Code:</span>
+              <span className={s.itemCodeVal} style={{ fontFamily: 'monospace', fontWeight: 'bold', background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: '4px' }}>
+                {detailProduct?.item_code || product.item_code || 'N/A'}
+              </span>
+            </div>
+
             <div className={s.ratingRow}>
               <div className={s.stars}>
                 {[...Array(5)].map((_, i) => (
@@ -86,12 +153,16 @@ export default function ProductDetail({ product, onBack }) {
 
             <div className={s.priceBlock}>
               <span className={s.price}>₹{product.price.toLocaleString('en-IN')}</span>
-              <span className={s.originalPrice}>₹{product.originalPrice.toLocaleString('en-IN')}</span>
-              <span className={s.discountTag}>{disc}% OFF</span>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <>
+                  <span className={s.originalPrice}>₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                  <span className={s.discountTag}>{disc}% OFF</span>
+                </>
+              )}
             </div>
 
             <p className={s.description}>
-              Elevate your wardrobe with this authentic, hand-woven masterpiece. Crafted with premium threads and traditional techniques, it offers unparalleled grace and comfort for any special occasion.
+              {detailProduct?.description || product.description || "Elevate your wardrobe with this authentic, hand-woven masterpiece. Crafted with premium threads and traditional techniques, it offers unparalleled grace and comfort for any special occasion."}
             </p>
 
             <div className={s.divider} />

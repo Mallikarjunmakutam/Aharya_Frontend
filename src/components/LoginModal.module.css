@@ -227,3 +227,67 @@
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* Choice Selection Styles */
+.choiceContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+  width: 100%;
+}
+
+.googleBtnContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.emailChoiceBtn {
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-black);
+  background: transparent;
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  transition: all var(--duration-normal) var(--ease);
+}
+
+.emailChoiceBtn:hover {
+  background: var(--color-black);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.backBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-gray-600);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  margin-bottom: var(--space-4);
+  align-self: flex-start;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.backBtn:hover {
+  color: var(--color-gold-dark);
+}

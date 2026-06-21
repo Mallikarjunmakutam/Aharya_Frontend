@@ -1,7 +1,7 @@
 // ============================================================
 // AHARYA – Login & Signup Modal
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import s from './LoginModal.module.css';
@@ -12,17 +12,41 @@ const CloseIcon = () => (
   </svg>
 );
 
+const MailIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+    <polyline points="22,6 12,13 2,6"/>
+  </svg>
+);
+
+const ArrowLeftIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"/>
+    <polyline points="12,19 5,12 12,5"/>
+  </svg>
+);
+
 export default function LoginModal({ isOpen, onClose }) {
-  const { login, signup } = useAuth();
+  const { login, signup, googleLogin } = useAuth();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signupMethod, setSignupMethod] = useState(null); // 'email' or null
+  const [googleLoaded, setGoogleLoaded] = useState(false);
 
-  const reset = () => { setForm({ name: '', email: '', password: '' }); setError(''); setSuccess(''); };
+  const reset = () => { 
+    setForm({ name: '', email: '', password: '' }); 
+    setError(''); 
+    setSuccess(''); 
+    setSignupMethod(null);
+  };
 
-  const switchTab = (t) => { setTab(t); reset(); };
+  const switchTab = (t) => { 
+    setTab(t); 
+    reset(); 
+  };
 
   const handleChange = (e) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -34,10 +58,9 @@ export default function LoginModal({ isOpen, onClose }) {
     setLoading(true);
     setError('');
     setSuccess('');
-    await new Promise(r => setTimeout(r, 600)); // fake async
 
     if (tab === 'login') {
-      const res = login(form.email, form.password);
+      const res = await login(form.email, form.password);
       if (res.success) {
         setSuccess('Welcome back! Logged in successfully.');
         setTimeout(onClose, 1200);
@@ -46,7 +69,7 @@ export default function LoginModal({ isOpen, onClose }) {
       }
     } else {
       if (!form.name.trim()) { setError('Name is required'); setLoading(false); return; }
-      const res = signup(form.name, form.email, form.password);
+      const res = await signup(form.name, form.email, form.password);
       if (res.success) {
         setSuccess('Account created! Welcome to Āhāryā.');
         setTimeout(onClose, 1200);
@@ -56,6 +79,57 @@ export default function LoginModal({ isOpen, onClose }) {
     }
     setLoading(false);
   };
+
+  // Detect and track Google Identity Services library load
+  useEffect(() => {
+    if (window.google) {
+      setGoogleLoaded(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      if (window.google) {
+        setGoogleLoaded(true);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Initialize and render Google Login button when container is visible
+  useEffect(() => {
+    if (!isOpen || !googleLoaded || tab !== 'signup' || signupMethod !== null) return;
+
+    const container = document.getElementById('google-signup-btn-container');
+    if (container && window.google) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id.apps.googleusercontent.com',
+          callback: async (response) => {
+            setLoading(true);
+            setError('');
+            setSuccess('');
+            const res = await googleLogin(response.credential);
+            if (res.success) {
+              setSuccess('Welcome to Āhāryā! Signed in successfully.');
+              setTimeout(onClose, 1200);
+            } else {
+              setError(res.error || 'Google authentication failed');
+            }
+            setLoading(false);
+          },
+        });
+        window.google.accounts.id.renderButton(container, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signup_with',
+          shape: 'pill',
+          width: 376,
+        });
+      } catch (err) {
+        console.error('Failed to render Google Sign-In button:', err);
+      }
+    }
+  }, [isOpen, tab, signupMethod, googleLoaded, googleLogin, onClose]);
 
   return (
     <AnimatePresence>
@@ -99,66 +173,98 @@ export default function LoginModal({ isOpen, onClose }) {
               >Sign Up</button>
             </div>
 
-            <form className={s.form} onSubmit={handleSubmit} noValidate>
-              {tab === 'signup' && (
+            {tab === 'signup' && signupMethod === null ? (
+              <div className={s.choiceContainer}>
+                <div id="google-signup-btn-container" className={s.googleBtnContainer}></div>
+                
+                <div className={s.divider}>
+                  <span>or</span>
+                </div>
+                
+                <button
+                  id="signup-email-btn"
+                  type="button"
+                  className={s.emailChoiceBtn}
+                  onClick={() => setSignupMethod('email')}
+                >
+                  <MailIcon /> Sign up with Email ID
+                </button>
+                
+                {error && <div className={s.error} style={{ marginTop: 'var(--space-4)' }}>{error}</div>}
+                {success && <div className={s.success} style={{ marginTop: 'var(--space-4)' }}>{success}</div>}
+              </div>
+            ) : (
+              <form className={s.form} onSubmit={handleSubmit} noValidate>
+                {tab === 'signup' && signupMethod === 'email' && (
+                  <button
+                    type="button"
+                    className={s.backBtn}
+                    onClick={() => setSignupMethod(null)}
+                  >
+                    <ArrowLeftIcon /> Back to options
+                  </button>
+                )}
+
+                {tab === 'signup' && (
+                  <div className={s.fieldGroup}>
+                    <label className={s.label} htmlFor="modal-name">Your Name</label>
+                    <input
+                      id="modal-name"
+                      className={s.input}
+                      type="text"
+                      name="name"
+                      placeholder="Priya Sharma"
+                      value={form.name}
+                      onChange={handleChange}
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
+                )}
+
                 <div className={s.fieldGroup}>
-                  <label className={s.label} htmlFor="modal-name">Your Name</label>
+                  <label className={s.label} htmlFor="modal-email">Email Address</label>
                   <input
-                    id="modal-name"
+                    id="modal-email"
                     className={s.input}
-                    type="text"
-                    name="name"
-                    placeholder="Priya Sharma"
-                    value={form.name}
+                    type="email"
+                    name="email"
+                    placeholder="hello@example.com"
+                    value={form.email}
                     onChange={handleChange}
-                    autoComplete="name"
+                    autoComplete="email"
                     required
                   />
                 </div>
-              )}
 
-              <div className={s.fieldGroup}>
-                <label className={s.label} htmlFor="modal-email">Email Address</label>
-                <input
-                  id="modal-email"
-                  className={s.input}
-                  type="email"
-                  name="email"
-                  placeholder="hello@example.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  autoComplete="email"
-                  required
-                />
-              </div>
+                <div className={s.fieldGroup}>
+                  <label className={s.label} htmlFor="modal-password">Password</label>
+                  <input
+                    id="modal-password"
+                    className={s.input}
+                    type="password"
+                    name="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                    autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                    required
+                  />
+                </div>
 
-              <div className={s.fieldGroup}>
-                <label className={s.label} htmlFor="modal-password">Password</label>
-                <input
-                  id="modal-password"
-                  className={s.input}
-                  type="password"
-                  name="password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={handleChange}
-                  autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-                  required
-                />
-              </div>
+                {error && <div className={s.error}>{error}</div>}
+                {success && <div className={s.success}>{success}</div>}
 
-              {error && <div className={s.error}>{error}</div>}
-              {success && <div className={s.success}>{success}</div>}
-
-              <button
-                id="modal-submit-btn"
-                className={s.submitBtn}
-                type="submit"
-                disabled={loading}
-              >
-                {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            </form>
+                <button
+                  id="modal-submit-btn"
+                  className={s.submitBtn}
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Please wait…' : tab === 'login' ? 'Sign In' : 'Create Account'}
+                </button>
+              </form>
+            )}
 
             <p className={s.terms}>
               By continuing, you agree to our{' '}

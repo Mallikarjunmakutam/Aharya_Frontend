@@ -49,14 +49,16 @@ const MenuIcon = () => (
   </svg>
 );
 
-export default function Header({ onSearch }) {
+export default function Header({ onSearch, setViewMode, activeCategory, setActiveCategory, setSelectedProduct }) {
   const { user, logout } = useAuth();
-  const { cartCount, wishlistItems } = useCart();
+  const { cartItems, cartCount, wishlistItems, removeFromCart, addToCart, toggleWishlist } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showCartDrawer, setShowCartDrawer] = useState(false);
+  const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
   const [searchVal, setSearchVal] = useState('');
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
@@ -82,6 +84,7 @@ export default function Header({ onSearch }) {
   const handleSearch = (e) => {
     setSearchVal(e.target.value);
     onSearch?.(e.target.value);
+    setSelectedProduct?.(null); // Clear selected product details on typing search
   };
 
   const handleCloseSearch = () => {
@@ -112,31 +115,51 @@ export default function Header({ onSearch }) {
 
           {/* Center Navigation */}
           <nav className={s.centerNav}>
-            <button className={s.navLink}>Collections</button>
-            <button className={s.navLink}>Wedding</button>
-            <button className={s.navLink}>Silk</button>
-            <button className={s.navLink}>Designer</button>
+            <button 
+              className={`${s.navLink} ${activeCategory === 'All' ? s.activeLink : ''}`} 
+              onClick={() => { setActiveCategory('All'); setSelectedProduct?.(null); }}
+            >
+              Collections
+            </button>
+            <button 
+              className={`${s.navLink} ${activeCategory === 'Wedding' ? s.activeLink : ''}`} 
+              onClick={() => { setActiveCategory('Wedding'); setSelectedProduct?.(null); }}
+            >
+              Wedding
+            </button>
+            <button 
+              className={`${s.navLink} ${activeCategory === 'Silk' ? s.activeLink : ''}`} 
+              onClick={() => { setActiveCategory('Silk'); setSelectedProduct?.(null); }}
+            >
+              Silk
+            </button>
+            <button 
+              className={`${s.navLink} ${activeCategory === 'Designer' ? s.activeLink : ''}`} 
+              onClick={() => { setActiveCategory('Designer'); setSelectedProduct?.(null); }}
+            >
+              Designer
+            </button>
           </nav>
 
           {/* Actions */}
           <div className={s.navActions}>
-            <button id="header-search-btn" className={s.iconBtn} onClick={() => setShowSearch(true)} aria-label="Search">
+            <button id="header-search-btn" className={s.iconBtn} onClick={() => { setShowSearch(true); setSelectedProduct?.(null); }} aria-label="Search">
               <SearchIcon />
             </button>
 
-            <button id="header-wishlist-btn" className={s.iconBtn} aria-label="Wishlist">
+            <button id="header-wishlist-btn" className={s.iconBtn} onClick={() => setShowWishlistDrawer(true)} aria-label="Wishlist">
               <HeartIcon />
               {wishlistItems.length > 0 && <span className={s.badge}>{wishlistItems.length}</span>}
             </button>
 
-            <button id="header-cart-btn" className={s.iconBtn} aria-label="Cart">
+            <button id="header-cart-btn" className={s.iconBtn} onClick={() => setShowCartDrawer(true)} aria-label="Cart">
               <BagIcon />
               {cartCount > 0 && <span className={s.badge}>{cartCount}</span>}
             </button>
 
             <div className={s.dividerLine} />
 
-            <button id="header-contact-btn" className={s.contactBtn}>
+            <button id="header-contact-btn" className={s.contactBtn} onClick={() => window.location.href = 'mailto:aharyastore@gmail.com'}>
               <MailIcon />
               <span>Contact</span>
             </button>
@@ -145,7 +168,7 @@ export default function Header({ onSearch }) {
               <div className={s.userMenu} ref={userMenuRef}>
                 <button className={s.userBtn} onClick={() => setShowUserMenu(v => !v)}>
                   <div className={s.userAvatar}>{initials}</div>
-                  {user.name.split(' ')[0]}
+                  {(user.name || user.full_name || 'User').split(' ')[0]}
                 </button>
                 <AnimatePresence>
                   {showUserMenu && (
@@ -162,6 +185,11 @@ export default function Header({ onSearch }) {
                       <button className={s.dropdownItem}>
                         <BagIcon /> My Orders
                       </button>
+                      {user?.is_staff && (
+                        <button className={s.dropdownItem} onClick={() => { setViewMode('superuser'); setShowUserMenu(false); }}>
+                          <UserIcon /> Superuser Panel
+                        </button>
+                      )}
                       <div className={s.dropdownDivider} />
                       <button className={s.dropdownItem} onClick={() => { logout(); setShowUserMenu(false); }}>
                         <LogoutIcon /> Sign Out
@@ -242,10 +270,10 @@ export default function Header({ onSearch }) {
                 </button>
               </div>
               <nav className={s.drawerNav}>
-                <a onClick={() => setShowMobileMenu(false)}>Collections</a>
-                <a onClick={() => setShowMobileMenu(false)}>Wedding</a>
-                <a onClick={() => setShowMobileMenu(false)}>Silk</a>
-                <a onClick={() => setShowMobileMenu(false)}>Designer</a>
+                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('All'); setSelectedProduct?.(null); }}>Collections</a>
+                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('Wedding'); setSelectedProduct?.(null); }}>Wedding</a>
+                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('Silk'); setSelectedProduct?.(null); }}>Silk</a>
+                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('Designer'); setSelectedProduct?.(null); }}>Designer</a>
                 <div className={s.drawerDivider} />
                 <a onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login / Signup</a>
               </nav>
@@ -256,6 +284,128 @@ export default function Header({ onSearch }) {
 
       {/* Login Modal */}
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
+
+      {/* Cart Drawer */}
+      <AnimatePresence>
+        {showCartDrawer && (
+          <>
+            <motion.div 
+              className={s.drawerOverlay}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCartDrawer(false)}
+            />
+            <motion.div
+              className={s.drawer}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+            >
+              <div className={s.drawerHeader}>
+                <span className={s.drawerTitle}>Shopping Cart</span>
+                <button className={s.drawerClose} onClick={() => setShowCartDrawer(false)}>
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className={s.drawerBody}>
+                {cartItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-gray-400)' }}>
+                    Your cart is empty.
+                  </div>
+                ) : (
+                  cartItems.map((item, idx) => (
+                    <div className={s.cartItemRow} key={item.id || idx}>
+                      <img src={item.image || '/assets/placeholder.jpg'} alt="" className={s.cartItemThumb} onError={(e) => { e.target.src='/assets/logo.jpg' }} />
+                      <div className={s.cartItemDetails}>
+                        <span className={s.cartItemName}>{item.name}</span>
+                        <span className={s.cartItemPrice}>
+                          {item.qty || 1} x ₹{parseFloat(item.price).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <button className={s.cartItemRemove} onClick={() => removeFromCart(item.id)} title="Remove Item">
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+              {cartItems.length > 0 && (
+                <div className={s.drawerFooter}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-dark)' }}>
+                    <span>Total Amount:</span>
+                    <span>₹{cartItems.reduce((acc, item) => acc + (item.qty || 1) * parseFloat(item.price), 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <button className={s.checkoutBtn} onClick={() => alert("Proceeding to secure checkout payment portal...")}>
+                    Proceed to Checkout
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Wishlist Drawer */}
+      <AnimatePresence>
+        {showWishlistDrawer && (
+          <>
+            <motion.div 
+              className={s.drawerOverlay}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWishlistDrawer(false)}
+            />
+            <motion.div
+              className={s.drawer}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+            >
+              <div className={s.drawerHeader}>
+                <span className={s.drawerTitle}>My Wishlist</span>
+                <button className={s.drawerClose} onClick={() => setShowWishlistDrawer(false)}>
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className={s.drawerBody}>
+                {wishlistItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-gray-400)' }}>
+                    Your wishlist is empty.
+                  </div>
+                ) : (
+                  wishlistItems.map((item, idx) => (
+                    <div className={s.cartItemRow} key={item.id || idx}>
+                      <img src={item.image || '/assets/placeholder.jpg'} alt="" className={s.cartItemThumb} onError={(e) => { e.target.src='/assets/logo.jpg' }} />
+                      <div className={s.cartItemDetails}>
+                        <span className={s.cartItemName}>{item.name}</span>
+                        <span className={s.cartItemPrice}>
+                          ₹{parseFloat(item.price).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <button 
+                          className={s.checkoutBtn} 
+                          style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                          onClick={() => { addToCart(item); toggleWishlist(item); }}
+                        >
+                          Add
+                        </button>
+                        <button className={s.cartItemRemove} onClick={() => toggleWishlist(item)} title="Remove Item">
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
