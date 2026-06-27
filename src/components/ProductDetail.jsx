@@ -26,20 +26,55 @@ const ArrowLeft = () => (
 export default function ProductDetail({ product, onBack }) {
   const { addToCart, toggleWishlist, isWishlisted } = useCart();
   const [added, setAdded] = useState(false);
-  const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || null);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [detailProduct, setDetailProduct] = useState(null);
   const [activeMedia, setActiveMedia] = useState(null);
 
+  const p = detailProduct ? {
+    id: detailProduct.id,
+    name: detailProduct.name,
+    category: detailProduct.category?.name || 'Uncategorized',
+    price: parseFloat(detailProduct.discount_price || detailProduct.price),
+    originalPrice: detailProduct.discount_price ? parseFloat(detailProduct.price) : null,
+    rating: parseFloat(detailProduct.rating) || 0,
+    reviews: detailProduct.total_reviews || 0,
+    image: detailProduct.main_image,
+    badge: detailProduct.is_featured ? 'Featured' : '',
+    description: detailProduct.description,
+    colors: [],
+    item_code: detailProduct.item_code,
+  } : {
+    id: product?.id,
+    name: product?.name || '',
+    category: product?.category || '',
+    price: product?.price || 0,
+    originalPrice: product?.originalPrice || null,
+    rating: product?.rating || 0,
+    reviews: product?.reviews || 0,
+    image: product?.image || '',
+    badge: product?.badge || '',
+    description: product?.description || '',
+    colors: product?.colors || [],
+    item_code: product?.item_code || '',
+  };
+
+  const [selectedColor, setSelectedColor] = useState(p.colors?.[0] || null);
+
+  useEffect(() => {
+    if (p.colors?.length > 0 && !selectedColor) {
+      setSelectedColor(p.colors[0]);
+    }
+  }, [p.colors, selectedColor]);
+
   const handleAdd = () => {
-    addToCart({ ...product, quantity, selectedColor });
+    addToCart({ ...p, quantity, selectedColor });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const disc = product.originalPrice && product.price 
-    ? Math.round((1 - product.price / product.originalPrice) * 100) 
+  const disc = p.originalPrice && p.price 
+    ? Math.round((1 - p.price / p.originalPrice) * 100) 
     : 0;
 
   useEffect(() => {
@@ -52,19 +87,29 @@ export default function ProductDetail({ product, onBack }) {
         if (mainImgObj) {
           setActiveMedia({ type: 'image', url: mainImgObj.image });
         } else {
-          setActiveMedia({ type: 'image', url: res.data.main_image || product.image });
+          setActiveMedia({ type: 'image', url: res.data.main_image || product?.image });
         }
       } catch (err) {
         console.error("Failed to fetch product details", err);
         setDetailProduct(null);
-        setActiveMedia({ type: 'image', url: product.image });
+        setActiveMedia({ type: 'image', url: product?.image });
       } finally {
         setLoading(false);
       }
     };
-    fetchDetail();
+    if (product?.id) {
+      fetchDetail();
+    }
     window.scrollTo(0, 0);
-  }, [product.id]);
+  }, [product?.id]);
+
+  if (loading && !p.name) {
+    return (
+      <div className={s.page} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ fontSize: '1.25rem', color: 'var(--color-gold)', fontFamily: 'var(--font-heading)' }}>Loading product details...</div>
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -92,16 +137,16 @@ export default function ProductDetail({ product, onBack }) {
                 />
               ) : (
                 <img 
-                  src={activeMedia?.url || product.image} 
-                  alt={product.name} 
+                  src={activeMedia?.url || p.image} 
+                  alt={p.name} 
                   className={s.mainImage} 
                 />
               )}
-              {product.badge && <span className={s.badge}>{product.badge}</span>}
+              {p.badge && <span className={s.badge}>{p.badge}</span>}
             </div>
             <div className={s.thumbnailList}>
               {loading ? (
-                <img src={product.image} className={s.thumbnailActive} alt="thumb" />
+                <img src={p.image} className={s.thumbnailActive} alt="thumb" />
               ) : (
                 <>
                   {detailProduct?.images?.map((img, idx) => (
@@ -129,50 +174,50 @@ export default function ProductDetail({ product, onBack }) {
 
           {/* Right: Details */}
           <div className={s.detailsSection}>
-            <div className={s.category}>{detailProduct?.category?.name || product.category}</div>
-            <h1 className={s.title}>{product.name}</h1>
+            <div className={s.category}>{detailProduct?.category?.name || p.category}</div>
+            <h1 className={s.title}>{p.name}</h1>
             
             <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <span className={s.itemCodeLabel}>Item Code:</span>
               <span className={s.itemCodeVal} style={{ fontFamily: 'monospace', fontWeight: 'bold', background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: '4px' }}>
-                {detailProduct?.item_code || product.item_code || 'N/A'}
+                {detailProduct?.item_code || p.item_code || 'N/A'}
               </span>
             </div>
 
             <div className={s.ratingRow}>
               <div className={s.stars}>
                 {[...Array(5)].map((_, i) => (
-                  <span key={i} style={{ color: i < Math.floor(product.rating) ? 'var(--color-gold)' : '#ddd' }}>
+                  <span key={i} style={{ color: i < Math.floor(p.rating) ? 'var(--color-gold)' : '#ddd' }}>
                     <StarIcon />
                   </span>
                 ))}
               </div>
-              <span className={s.ratingScore}>{product.rating}</span>
-              <span className={s.reviewsCount}>({product.reviews} customer reviews)</span>
+              <span className={s.ratingScore}>{p.rating}</span>
+              <span className={s.reviewsCount}>({p.reviews} customer reviews)</span>
             </div>
 
             <div className={s.priceBlock}>
-              <span className={s.price}>₹{product.price.toLocaleString('en-IN')}</span>
-              {product.originalPrice && product.originalPrice > product.price && (
+              <span className={s.price}>₹{p.price.toLocaleString('en-IN')}</span>
+              {p.originalPrice && p.originalPrice > p.price && (
                 <>
-                  <span className={s.originalPrice}>₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                  <span className={s.originalPrice}>₹{p.originalPrice.toLocaleString('en-IN')}</span>
                   <span className={s.discountTag}>{disc}% OFF</span>
                 </>
               )}
             </div>
 
             <p className={s.description}>
-              {detailProduct?.description || product.description || "Elevate your wardrobe with this authentic, hand-woven masterpiece. Crafted with premium threads and traditional techniques, it offers unparalleled grace and comfort for any special occasion."}
+              {detailProduct?.description || p.description || "Elevate your wardrobe with this authentic, hand-woven masterpiece. Crafted with premium threads and traditional techniques, it offers unparalleled grace and comfort for any special occasion."}
             </p>
 
             <div className={s.divider} />
 
             {/* Colors */}
-            {product.colors?.length > 0 && (
+            {p.colors?.length > 0 && (
               <div className={s.colorSelection}>
                 <div className={s.sectionTitle}>Select Color</div>
                 <div className={s.colorsList}>
-                  {product.colors.map(c => (
+                  {p.colors.map(c => (
                     <button
                       key={c}
                       className={`${s.colorBtn} ${selectedColor === c ? s.colorActive : ''}`}
@@ -205,10 +250,10 @@ export default function ProductDetail({ product, onBack }) {
               </button>
               
               <button 
-                className={`${s.wishlistBtn} ${isWishlisted(product.id) ? s.wishlistActive : ''}`}
-                onClick={() => toggleWishlist(product)}
+                className={`${s.wishlistBtn} ${isWishlisted(p.id) ? s.wishlistActive : ''}`}
+                onClick={() => toggleWishlist(p)}
               >
-                <HeartIcon filled={isWishlisted(product.id)} />
+                <HeartIcon filled={isWishlisted(p.id)} />
               </button>
             </div>
             

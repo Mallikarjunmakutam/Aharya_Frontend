@@ -2,9 +2,12 @@
 // AHARYA – Split Layout Hero Section
 // ============================================================
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import s from './HeroSection.module.css';
 
 export default function HeroSection() {
+  const navigate = useNavigate();
+
   return (
     <section id="hero" className={s.hero}>
       {/* Background Texture/Gradient */}
@@ -37,7 +40,7 @@ export default function HeroSection() {
             <div className={s.ctaGroup}>
               <button 
                 className={s.primaryBtn} 
-                onClick={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => navigate('/shop')}
               >
                 <span className={s.btnText}>Shop Collection</span>
                 <span className={s.btnShine} />

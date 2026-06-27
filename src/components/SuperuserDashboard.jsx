@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import s from './SuperuserDashboard.module.css';
 
@@ -71,7 +73,16 @@ const CameraIcon = () => (
   </svg>
 );
 
-export default function SuperuserDashboard({ setViewMode }) {
+export default function SuperuserDashboard() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && (!user || !user.is_staff)) {
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
+
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     total_users: 0,
@@ -206,25 +217,29 @@ export default function SuperuserDashboard({ setViewMode }) {
   };
 
   useEffect(() => {
-    fetchStats();
-    fetchCategories();
-  }, []);
+    if (!loading && user?.is_staff) {
+      fetchStats();
+      fetchCategories();
+    }
+  }, [loading, user]);
 
   useEffect(() => {
-    if (activeTab === 'overview') {
-      fetchStats();
-      fetchOrders();
-    } else if (activeTab === 'orders') {
-      fetchOrders();
-    } else if (activeTab === 'products') {
-      fetchProducts();
-    } else if (activeTab === 'users') {
-      fetchUsers();
+    if (!loading && user?.is_staff) {
+      if (activeTab === 'overview') {
+        fetchStats();
+        fetchOrders();
+      } else if (activeTab === 'orders') {
+        fetchOrders();
+      } else if (activeTab === 'products') {
+        fetchProducts();
+      } else if (activeTab === 'users') {
+        fetchUsers();
+      }
+      setSearchQuery('');
+      setStatusFilter('All');
+      setCategoryFilter('All');
     }
-    setSearchQuery('');
-    setStatusFilter('All');
-    setCategoryFilter('All');
-  }, [activeTab]);
+  }, [activeTab, loading, user]);
 
   // Handle Quick Stock Changes
   const handleQuickStockChange = async (product, newStock) => {
@@ -601,6 +616,14 @@ export default function SuperuserDashboard({ setViewMode }) {
 
   const lowStockList = products.filter(p => p.stock < 5);
 
+  if (loading || !user || !user.is_staff) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a', color: '#fff', fontFamily: 'var(--font-body)' }}>
+        <div>Verifying administrator credentials...</div>
+      </div>
+    );
+  }
+
   return (
     <div className={s.dashboardContainer}>
       {/* Sidebar Navigation */}
@@ -641,7 +664,7 @@ export default function SuperuserDashboard({ setViewMode }) {
         </nav>
 
         <div className={s.sidebarFooter}>
-          <button className={s.backBtn} onClick={() => setViewMode('shop')}>
+          <button className={s.backBtn} onClick={() => navigate('/')}>
             <BackIcon /> Back to Storefront
           </button>
         </div>

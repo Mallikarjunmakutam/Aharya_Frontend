@@ -3,6 +3,7 @@
 // ============================================================
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoginModal from './LoginModal';
@@ -49,9 +50,16 @@ const MenuIcon = () => (
   </svg>
 );
 
-export default function Header({ onSearch, setViewMode, activeCategory, setActiveCategory, setSelectedProduct }) {
+export default function Header({ onSearch, setViewMode, activeCategory: activeCategoryProp, setActiveCategory: setActiveCategoryProp, setSelectedProduct }) {
   const { user, logout } = useAuth();
   const { cartItems, cartCount, wishlistItems, removeFromCart, addToCart, toggleWishlist } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const activeCategory = searchParams.get('category') || 'All';
+  const searchQueryParam = searchParams.get('search') || '';
+
   const [scrolled, setScrolled] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -59,7 +67,7 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
-  const [searchVal, setSearchVal] = useState('');
+  const [searchVal, setSearchVal] = useState(searchQueryParam);
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -81,16 +89,60 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
     if (showSearch && searchRef.current) searchRef.current.focus();
   }, [showSearch]);
 
+  useEffect(() => {
+    setSearchVal(searchQueryParam);
+  }, [searchQueryParam]);
+
+  const handleCategoryClick = (category) => {
+    if (location.pathname !== '/shop') {
+      const params = category !== 'All' ? `?category=${encodeURIComponent(category)}` : '';
+      navigate(`/shop${params}`);
+    } else {
+      if (category === 'All') {
+        const nextParams = {};
+        if (searchQueryParam) nextParams.search = searchQueryParam;
+        setSearchParams(nextParams);
+      } else {
+        const nextParams = { category };
+        if (searchQueryParam) nextParams.search = searchQueryParam;
+        setSearchParams(nextParams);
+      }
+    }
+  };
+
+  const handleLogoClick = () => {
+    if (location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
+    }
+  };
+
   const handleSearch = (e) => {
-    setSearchVal(e.target.value);
-    onSearch?.(e.target.value);
-    setSelectedProduct?.(null); // Clear selected product details on typing search
+    const val = e.target.value;
+    setSearchVal(val);
+    if (location.pathname !== '/shop') {
+      const params = {};
+      if (val) params.search = val;
+      if (activeCategory && activeCategory !== 'All') params.category = activeCategory;
+      const queryStr = new URLSearchParams(params).toString();
+      navigate(`/shop?${queryStr}`);
+    } else {
+      const nextParams = {};
+      if (val) nextParams.search = val;
+      if (activeCategory && activeCategory !== 'All') nextParams.category = activeCategory;
+      setSearchParams(nextParams);
+    }
   };
 
   const handleCloseSearch = () => {
     setShowSearch(false);
     setSearchVal('');
-    onSearch?.('');
+    if (location.pathname === '/shop') {
+      const nextParams = {};
+      if (activeCategory && activeCategory !== 'All') nextParams.category = activeCategory;
+      setSearchParams(nextParams);
+    }
   };
 
   const initials = user?.name ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '';
@@ -105,7 +157,7 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
       >
         <div className={s.headerInner}>
           {/* Logo */}
-          <div className={s.logo} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className={s.logo} onClick={handleLogoClick}>
             <img src="/assets/logo.jpg" alt="Aharya Logo" className={s.logoImg} />
             <div className={s.logoText}>
               <span className={s.logoName}>Āhāryā</span>
@@ -117,25 +169,25 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
           <nav className={s.centerNav}>
             <button 
               className={`${s.navLink} ${activeCategory === 'All' ? s.activeLink : ''}`} 
-              onClick={() => { setActiveCategory('All'); setSelectedProduct?.(null); }}
+              onClick={() => handleCategoryClick('All')}
             >
               Collections
             </button>
             <button 
               className={`${s.navLink} ${activeCategory === 'Wedding' ? s.activeLink : ''}`} 
-              onClick={() => { setActiveCategory('Wedding'); setSelectedProduct?.(null); }}
+              onClick={() => handleCategoryClick('Wedding')}
             >
               Wedding
             </button>
             <button 
               className={`${s.navLink} ${activeCategory === 'Silk' ? s.activeLink : ''}`} 
-              onClick={() => { setActiveCategory('Silk'); setSelectedProduct?.(null); }}
+              onClick={() => handleCategoryClick('Silk')}
             >
               Silk
             </button>
             <button 
               className={`${s.navLink} ${activeCategory === 'Designer' ? s.activeLink : ''}`} 
-              onClick={() => { setActiveCategory('Designer'); setSelectedProduct?.(null); }}
+              onClick={() => handleCategoryClick('Designer')}
             >
               Designer
             </button>
@@ -143,7 +195,7 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
 
           {/* Actions */}
           <div className={s.navActions}>
-            <button id="header-search-btn" className={s.iconBtn} onClick={() => { setShowSearch(true); setSelectedProduct?.(null); }} aria-label="Search">
+            <button id="header-search-btn" className={s.iconBtn} onClick={() => setShowSearch(true)} aria-label="Search">
               <SearchIcon />
             </button>
 
@@ -186,7 +238,7 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
                         <BagIcon /> My Orders
                       </button>
                       {user?.is_staff && (
-                        <button className={s.dropdownItem} onClick={() => { setViewMode('superuser'); setShowUserMenu(false); }}>
+                        <button className={s.dropdownItem} onClick={() => { navigate('/superuser'); setShowUserMenu(false); }}>
                           <UserIcon /> Superuser Panel
                         </button>
                       )}
@@ -270,10 +322,10 @@ export default function Header({ onSearch, setViewMode, activeCategory, setActiv
                 </button>
               </div>
               <nav className={s.drawerNav}>
-                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('All'); setSelectedProduct?.(null); }}>Collections</a>
-                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('Wedding'); setSelectedProduct?.(null); }}>Wedding</a>
-                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('Silk'); setSelectedProduct?.(null); }}>Silk</a>
-                <a onClick={() => { setShowMobileMenu(false); setActiveCategory('Designer'); setSelectedProduct?.(null); }}>Designer</a>
+                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('All'); }}>Collections</a>
+                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('Wedding'); }}>Wedding</a>
+                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('Silk'); }}>Silk</a>
+                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('Designer'); }}>Designer</a>
                 <div className={s.drawerDivider} />
                 <a onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login / Signup</a>
               </nav>
