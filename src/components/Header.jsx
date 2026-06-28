@@ -52,7 +52,7 @@ const MenuIcon = () => (
 
 export default function Header({ onSearch, setViewMode, activeCategory: activeCategoryProp, setActiveCategory: setActiveCategoryProp, setSelectedProduct }) {
   const { user, logout } = useAuth();
-  const { cartItems, cartCount, wishlistItems, removeFromCart, addToCart, toggleWishlist } = useCart();
+  const { cartItems, cartCount, wishlistItems, removeFromCart, addToCart, toggleWishlist, isCartOpen, setIsCartOpen } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -65,7 +65,6 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
   const [showSearch, setShowSearch] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
   const [searchVal, setSearchVal] = useState(searchQueryParam);
   const userMenuRef = useRef(null);
@@ -204,7 +203,7 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
               {wishlistItems.length > 0 && <span className={s.badge}>{wishlistItems.length}</span>}
             </button>
 
-            <button id="header-cart-btn" className={s.iconBtn} onClick={() => setShowCartDrawer(true)} aria-label="Cart">
+            <button id="header-cart-btn" className={s.iconBtn} onClick={() => setIsCartOpen(true)} aria-label="Cart">
               <BagIcon />
               {cartCount > 0 && <span className={s.badge}>{cartCount}</span>}
             </button>
@@ -339,14 +338,14 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
 
       {/* Cart Drawer */}
       <AnimatePresence>
-        {showCartDrawer && (
+        {isCartOpen && (
           <>
             <motion.div 
               className={s.drawerOverlay}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowCartDrawer(false)}
+              onClick={() => setIsCartOpen(false)}
             />
             <motion.div
               className={s.drawer}
@@ -357,7 +356,7 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
             >
               <div className={s.drawerHeader}>
                 <span className={s.drawerTitle}>Shopping Cart</span>
-                <button className={s.drawerClose} onClick={() => setShowCartDrawer(false)}>
+                <button className={s.drawerClose} onClick={() => setIsCartOpen(false)}>
                   <CloseIcon />
                 </button>
               </div>

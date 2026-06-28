@@ -24,7 +24,7 @@ const ArrowLeft = () => (
 );
 
 export default function ProductDetail({ product, onBack }) {
-  const { addToCart, toggleWishlist, isWishlisted } = useCart();
+  const { addToCart, toggleWishlist, isWishlisted, setIsCartOpen } = useCart();
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -68,9 +68,14 @@ export default function ProductDetail({ product, onBack }) {
   }, [p.colors, selectedColor]);
 
   const handleAdd = () => {
-    addToCart({ ...p, quantity, selectedColor });
+    addToCart(p, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleBuyNow = async () => {
+    await addToCart(p, quantity);
+    setIsCartOpen(true);
   };
 
   const disc = p.originalPrice && p.price 
@@ -247,6 +252,13 @@ export default function ProductDetail({ product, onBack }) {
                 onClick={handleAdd}
               >
                 {added ? <><CheckIcon /> Added to Cart</> : 'Add to Cart'}
+              </button>
+              
+              <button 
+                className={s.buyNowBtn} 
+                onClick={handleBuyNow}
+              >
+                Buy Now
               </button>
               
               <button 

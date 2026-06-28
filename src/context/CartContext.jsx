@@ -11,6 +11,7 @@ export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Fetch cart and wishlist on auth change
   useEffect(() => {
@@ -26,40 +27,69 @@ export function CartProvider({ children }) {
   const fetchCart = async () => {
     try {
       const res = await api.get('/cart/');
-      // CartViewSet returns an array for list(), but get_object() returns single cart.
-      // Assuming list returns [cart]
-      if (res.data && res.data.length > 0) {
+      const data = res.data.results || res.data;
+      if (data && data.length > 0) {
         // Map backend CartItem structure to frontend structure
-        const items = res.data[0].items.map(item => ({
-          ...item.product,
+        const items = data[0].items.map(item => ({
+          id: item.product.id,
+          name: item.product.name,
+          category: item.product.category?.name || 'Uncategorized',
+          price: parseFloat(item.product.discount_price || item.product.price),
+          originalPrice: item.product.discount_price ? parseFloat(item.product.price) : null,
+          rating: parseFloat(item.product.rating) || 0,
+          reviews: item.product.total_reviews || 0,
+          image: item.product.main_image,
+          badge: item.product.is_featured ? 'Featured' : '',
+          item_code: item.product.item_code,
           qty: item.quantity
         }));
         setCartItems(items);
+      } else {
+        setCartItems([]);
       }
     } catch (e) {
       console.error('Error fetching cart', e);
+      setCartItems([]);
     }
   };
 
   const fetchWishlist = async () => {
     try {
       const res = await api.get('/cart/wishlist/');
-      if (res.data && res.data.length > 0) {
-        setWishlistItems(res.data[0].products);
+      const data = res.data.results || res.data;
+      if (data && data.length > 0) {
+        const products = data[0].products.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category?.name || 'Uncategorized',
+          price: parseFloat(p.discount_price || p.price),
+          originalPrice: p.discount_price ? parseFloat(p.price) : null,
+          rating: parseFloat(p.rating) || 0,
+          reviews: p.total_reviews || 0,
+          image: p.main_image,
+          badge: p.is_featured ? 'Featured' : '',
+          item_code: p.item_code,
+          colors: []
+        }));
+        setWishlistItems(products);
+      } else {
+        setWishlistItems([]);
       }
     } catch (e) {
       console.error('Error fetching wishlist', e);
+      setWishlistItems([]);
     }
   };
 
-  const addToCart = async (product) => {
+  const addToCart = async (product, quantity = 1) => {
     if (!user) {
       // Fallback for non-logged in (or force login)
       alert("Please login to add to cart");
       return;
     }
+    const qty = typeof quantity === 'number' ? quantity : (product.quantity || 1);
     try {
-      await api.post('/cart/add-item/', { product_id: product.id, quantity: 1 });
+      await api.post('/cart/add-item/', { product_id: product.id, quantity: qty });
       fetchCart();
     } catch (e) {
       console.error('Error adding to cart', e);
@@ -94,7 +124,7 @@ export function CartProvider({ children }) {
   const isWishlisted = (id) => wishlistItems.some(i => i.id === id);
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, cartCount, wishlistItems, toggleWishlist, isWishlisted }}>
+    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, cartCount, wishlistItems, toggleWishlist, isWishlisted, isCartOpen, setIsCartOpen }}>
       {children}
     </CartContext.Provider>
   );
