@@ -116,12 +116,28 @@ export default function ProductSection({ searchQuery = '', activeCategory = 'All
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(["All"]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Reset page when search or category changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, searchQuery]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        const params = { page: currentPage };
+        if (activeCategory && activeCategory !== 'All') {
+          params.category__name = activeCategory;
+        }
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
+
         const [prodRes, catRes] = await Promise.all([
-          api.get('/products/'),
+          api.get('/products/', { params }),
           api.get('/products/categories/')
         ]);
 
@@ -129,18 +145,27 @@ export default function ProductSection({ searchQuery = '', activeCategory = 'All
         const fetchedProducts = (prodRes.data.results || prodRes.data).map(p => ({
           id: p.id,
           name: p.name,
+          slug: p.slug,
           category: p.category?.name || 'Uncategorized',
-          price: parseFloat(p.discount_price || p.price),
-          originalPrice: p.discount_price ? parseFloat(p.price) : null,
+          price: p.discount_price && parseFloat(p.discount_price) > 0 
+            ? parseFloat(p.discount_price) 
+            : parseFloat(p.price),
+          originalPrice: p.discount_price && parseFloat(p.discount_price) > 0 
+            ? parseFloat(p.price) 
+            : null,
           rating: parseFloat(p.rating) || 0,
           reviews: p.total_reviews || 0,
           image: p.main_image,
           badge: p.is_featured ? 'Featured' : '',
           item_code: p.item_code,
-          colors: [] // Default empty since backend doesn't provide colors in list view
+          colors: [] 
         }));
 
         setProducts(fetchedProducts);
+
+        // Calculate pages based on DRF count field
+        const count = prodRes.data.count || fetchedProducts.length;
+        setTotalPages(Math.ceil(count / 10) || 1);
 
         const fetchedCategories = ["All", ...(catRes.data.results || catRes.data).map(c => c.name)];
         setCategories(fetchedCategories);
@@ -151,18 +176,9 @@ export default function ProductSection({ searchQuery = '', activeCategory = 'All
       }
     };
     fetchData();
-  }, []);
+  }, [activeCategory, searchQuery, currentPage]);
 
-  const filtered = useMemo(() => {
-    return products.filter(p => {
-      const catMatch = activeCategory === 'All' || p.category === activeCategory;
-      const searchMatch = !searchQuery || 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.item_code?.toLowerCase().includes(searchQuery.toLowerCase());
-      return catMatch && searchMatch;
-    });
-  }, [activeCategory, searchQuery, products]);
+  const filtered = products;
 
   return (
     <section id="products" className={s.section}>
@@ -200,7 +216,15 @@ export default function ProductSection({ searchQuery = '', activeCategory = 'All
         {/* Grid */}
         <AnimatePresence mode="popLayout">
           {loading ? (
-             <div className={s.noResults}>Loading products...</div>
+            <div className={s.grid}>
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className={s.cardSkeleton}>
+                  <div className={`${s.skeletonImage} ${s.shimmer}`} />
+                  <div className={`${s.skeletonTitle} ${s.shimmer}`} />
+                  <div className={`${s.skeletonPrice} ${s.shimmer}`} />
+                </div>
+              ))}
+            </div>
           ) : (
             <motion.div className={s.grid} layout>
               {filtered.length === 0 ? (
@@ -216,6 +240,42 @@ export default function ProductSection({ searchQuery = '', activeCategory = 'All
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Premium Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className={s.paginationContainer}>
+            <button 
+              className={s.pageArrow} 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              ← Prev
+            </button>
+            
+            <div className={s.pageNumbers}>
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNum = index + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    className={`${s.pageNumBtn} ${currentPage === pageNum ? s.activePageNum : ''}`}
+                    onClick={() => setCurrentPage(pageNum)}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button 
+              className={s.pageArrow} 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

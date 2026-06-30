@@ -45,9 +45,6 @@ export default function HeroSection() {
                 <span className={s.btnText}>Shop Collection</span>
                 <span className={s.btnShine} />
               </button>
-              <button className={s.secondaryBtn}>
-                Explore Lookbook
-              </button>
             </div>
           </motion.div>
 

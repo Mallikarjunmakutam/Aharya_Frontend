@@ -15,22 +15,54 @@ const FacebookIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
 );
 
+import { useNavigate } from 'react-router-dom';
+
 export default function Footer() {
+  const navigate = useNavigate();
+
+  const handleCategoryClick = (cat) => {
+    if (cat === "New Arrivals" || cat === "Sale") {
+      navigate('/shop');
+    } else {
+      navigate(`/shop?category=${encodeURIComponent(cat)}`);
+    }
+  };
+
+  const handleInfoClick = (info) => {
+    if (info === "Contact Us") {
+      navigate('/contact');
+    } else if (info === "Blog") {
+      navigate('/blog');
+    } else if (info === "Our Weavers") {
+      navigate('/weavers');
+    } else if (info === "Size Guide") {
+      navigate('/size-guide');
+    } else {
+      navigate('/about');
+    }
+  };
+
   return (
     <footer className={s.footer}>
       <div className="container">
-        <div className={s.footerGrid}>
+        <div className={s.footerGrid} style={{ gridTemplateColumns: '1.2fr 0.8fr 0.8fr' }}>
           {/* Brand */}
           <div className={s.brandCol}>
-            <div className={s.footerLogo}>
-              <img src="/assets/logo.jpg" alt="Aharya" className={s.footerLogoImg} />
+            <div className={s.footerLogo} onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+              <img src="/assets/logo.jpg" alt="Aharya" className={s.footerLogoImg} onError={(e) => { e.target.style.display = 'none'; }} />
               <span className={s.footerLogoName}>Āhāryā</span>
             </div>
             <p className={s.footerDesc}>
               The Indian Diva's Closet. Celebrating the timeless art of handcrafted sarees from master weavers across India.
             </p>
             <div className={s.socialRow}>
-              <button className={s.socialBtn} aria-label="Instagram"><InstagramIcon /></button>
+              <button 
+                className={s.socialBtn} 
+                aria-label="Instagram"
+                onClick={() => window.open('https://www.instagram.com/_aharya__?igsh=MTVpNWl2cmRveWF0bw==', '_blank')}
+              >
+                <InstagramIcon />
+              </button>
               <button className={s.socialBtn} aria-label="Pinterest"><PinterestIcon /></button>
               <button className={s.socialBtn} aria-label="Facebook"><FacebookIcon /></button>
             </div>
@@ -41,7 +73,7 @@ export default function Footer() {
             <div className={s.colTitle}>Shop</div>
             <ul className={s.colLinks}>
               {["New Arrivals", "Wedding Collection", "Silk Sarees", "Designer Sarees", "Daily Wear", "Sale"].map(l => (
-                <li key={l}><a>{l}</a></li>
+                <li key={l}><a onClick={() => handleCategoryClick(l)} style={{ cursor: 'pointer' }}>{l}</a></li>
               ))}
             </ul>
           </div>
@@ -50,29 +82,10 @@ export default function Footer() {
           <div>
             <div className={s.colTitle}>Information</div>
             <ul className={s.colLinks}>
-              {["About Aharya", "Our Weavers", "Blog", "Size Guide", "Care Instructions", "Contact Us"].map(l => (
-                <li key={l}><a>{l}</a></li>
+              {["About Aharya", "Our Weavers", "Blog", "Size Guide", "Contact Us"].map(l => (
+                <li key={l}><a onClick={() => handleInfoClick(l)} style={{ cursor: 'pointer' }}>{l}</a></li>
               ))}
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <div className={s.newsletterTitle}>Stay in Style</div>
-            <p className={s.newsletterText}>
-              Subscribe for exclusive collections, artisan stories, and seasonal offers.
-            </p>
-            <form className={s.newsletterForm} onSubmit={e => e.preventDefault()}>
-              <input
-                className={s.newsletterInput}
-                type="email"
-                placeholder="your@email.com"
-                id="footer-newsletter-input"
-              />
-              <button className={s.newsletterBtn} type="submit" id="footer-newsletter-btn">
-                Join
-              </button>
-            </form>
           </div>
         </div>
 
@@ -82,9 +95,9 @@ export default function Footer() {
             © {new Date().getFullYear()} Āhāryā. All rights reserved. Made with ♥ in India.
           </p>
           <div className={s.bottomLinks}>
-            <a>Privacy Policy</a>
-            <a>Terms of Service</a>
-            <a>Shipping Policy</a>
+            <a onClick={() => navigate('/about')} style={{ cursor: 'pointer' }}>Privacy Policy</a>
+            <a onClick={() => navigate('/about')} style={{ cursor: 'pointer' }}>Terms of Service</a>
+            <a onClick={() => navigate('/about')} style={{ cursor: 'pointer' }}>Shipping Policy</a>
           </div>
         </div>
       </div>

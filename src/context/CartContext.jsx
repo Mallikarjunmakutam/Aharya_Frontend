@@ -34,8 +34,12 @@ export function CartProvider({ children }) {
           id: item.product.id,
           name: item.product.name,
           category: item.product.category?.name || 'Uncategorized',
-          price: parseFloat(item.product.discount_price || item.product.price),
-          originalPrice: item.product.discount_price ? parseFloat(item.product.price) : null,
+          price: item.product.discount_price && parseFloat(item.product.discount_price) > 0 
+            ? parseFloat(item.product.discount_price) 
+            : parseFloat(item.product.price),
+          originalPrice: item.product.discount_price && parseFloat(item.product.discount_price) > 0 
+            ? parseFloat(item.product.price) 
+            : null,
           rating: parseFloat(item.product.rating) || 0,
           reviews: item.product.total_reviews || 0,
           image: item.product.main_image,
@@ -62,8 +66,12 @@ export function CartProvider({ children }) {
           id: p.id,
           name: p.name,
           category: p.category?.name || 'Uncategorized',
-          price: parseFloat(p.discount_price || p.price),
-          originalPrice: p.discount_price ? parseFloat(p.price) : null,
+          price: p.discount_price && parseFloat(p.discount_price) > 0 
+            ? parseFloat(p.discount_price) 
+            : parseFloat(p.price),
+          originalPrice: p.discount_price && parseFloat(p.discount_price) > 0 
+            ? parseFloat(p.price) 
+            : null,
           rating: parseFloat(p.rating) || 0,
           reviews: p.total_reviews || 0,
           image: p.main_image,

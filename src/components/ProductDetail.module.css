@@ -393,3 +393,142 @@
     position: static;
   }
 }
+
+/* Shimmer loader */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.shimmer {
+  background: #f6f7f8;
+  background-image: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 800px 100%;
+  animation-duration: 1.2s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+  animation-name: shimmer;
+  animation-timing-function: linear;
+}
+
+/* Detail page skeleton */
+.detailSkeleton {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 48px;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 120px auto 80px;
+  padding: 0 var(--space-8);
+}
+
+.skeletonLeft {
+  height: 600px;
+  border-radius: 12px;
+}
+
+.skeletonRight {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skeletonLine {
+  height: 16px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.skeletonTitle {
+  height: 36px;
+  width: 60%;
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+/* Related Products & Recently Viewed */
+.carouselSection {
+  margin-top: 80px;
+  border-top: 1px solid #eee;
+  padding-top: 40px;
+}
+
+.carouselTitle {
+  font-family: var(--font-heading, serif);
+  font-size: 2.2rem;
+  margin-bottom: 30px;
+  color: var(--color-dark);
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 30px;
+}
+
+.productCard {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform var(--duration-normal) var(--ease);
+}
+
+.productCard:hover {
+  transform: translateY(-6px);
+}
+
+.cardImageWrap {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardCategory {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #888;
+  letter-spacing: 0.05em;
+}
+
+.cardName {
+  font-family: var(--font-heading, serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-dark);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardPrice {
+  font-weight: 600;
+  color: var(--color-gold);
+}
+

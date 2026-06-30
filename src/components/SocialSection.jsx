@@ -29,8 +29,8 @@ export default function SocialSection() {
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
       >
-        <div className={s.subtitle}>#AharyaWomen</div>
-        <h2 className={s.title}>Styled by You</h2>
+        <div className={s.subtitle}>Celebrating Handloom</div>
+        <h2 className={s.title}>About Our Journey</h2>
       </motion.div>
 
       <div className={s.grid}>

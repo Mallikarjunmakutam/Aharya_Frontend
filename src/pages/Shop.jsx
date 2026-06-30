@@ -20,7 +20,7 @@ export default function Shop() {
   };
 
   const handleSelectProduct = (product) => {
-    navigate(`/product/${product.id}`);
+    navigate(`/product/${product.slug}`);
   };
 
   return (

@@ -166,34 +166,18 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
 
           {/* Center Navigation */}
           <nav className={s.centerNav}>
-            <button 
-              className={`${s.navLink} ${activeCategory === 'All' ? s.activeLink : ''}`} 
-              onClick={() => handleCategoryClick('All')}
-            >
-              Collections
-            </button>
-            <button 
-              className={`${s.navLink} ${activeCategory === 'Wedding' ? s.activeLink : ''}`} 
-              onClick={() => handleCategoryClick('Wedding')}
-            >
-              Wedding
-            </button>
-            <button 
-              className={`${s.navLink} ${activeCategory === 'Silk' ? s.activeLink : ''}`} 
-              onClick={() => handleCategoryClick('Silk')}
-            >
-              Silk
-            </button>
-            <button 
-              className={`${s.navLink} ${activeCategory === 'Designer' ? s.activeLink : ''}`} 
-              onClick={() => handleCategoryClick('Designer')}
-            >
-              Designer
-            </button>
           </nav>
 
           {/* Actions */}
           <div className={s.navActions}>
+            <button 
+              className={`${s.navLink} ${location.pathname === '/about' ? s.activeLink : ''}`} 
+              onClick={() => navigate('/about')}
+              style={{ marginRight: '16px' }}
+            >
+              About Us
+            </button>
+
             <button id="header-search-btn" className={s.iconBtn} onClick={() => setShowSearch(true)} aria-label="Search">
               <SearchIcon />
             </button>
@@ -210,9 +194,9 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
 
             <div className={s.dividerLine} />
 
-            <button id="header-contact-btn" className={s.contactBtn} onClick={() => window.location.href = 'mailto:aharyastore@gmail.com'}>
+            <button id="header-contact-btn" className={s.contactBtn} onClick={() => navigate('/contact')}>
               <MailIcon />
-              <span>Contact</span>
+              <span>Contact Us</span>
             </button>
 
             {user ? (
@@ -230,10 +214,10 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.18 }}
                     >
-                      <button className={s.dropdownItem}>
+                      <button className={s.dropdownItem} onClick={() => { navigate('/account'); setShowUserMenu(false); }}>
                         <UserIcon /> My Account
                       </button>
-                      <button className={s.dropdownItem}>
+                      <button className={s.dropdownItem} onClick={() => { navigate('/orders'); setShowUserMenu(false); }}>
                         <BagIcon /> My Orders
                       </button>
                       {user?.is_staff && (
@@ -321,10 +305,10 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
                 </button>
               </div>
               <nav className={s.drawerNav}>
-                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('All'); }}>Collections</a>
-                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('Wedding'); }}>Wedding</a>
-                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('Silk'); }}>Silk</a>
-                <a onClick={() => { setShowMobileMenu(false); handleCategoryClick('Designer'); }}>Designer</a>
+                <a onClick={() => { setShowMobileMenu(false); navigate('/shop'); }}>Collections</a>
+                <a onClick={() => { setShowMobileMenu(false); navigate('/about'); }}>About Us</a>
+                <a onClick={() => { setShowMobileMenu(false); navigate('/blog'); }}>Blog</a>
+                <a onClick={() => { setShowMobileMenu(false); navigate('/contact'); }}>Contact Us</a>
                 <div className={s.drawerDivider} />
                 <a onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login / Signup</a>
               </nav>
@@ -388,7 +372,7 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
                     <span>Total Amount:</span>
                     <span>₹{cartItems.reduce((acc, item) => acc + (item.qty || 1) * parseFloat(item.price), 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <button className={s.checkoutBtn} onClick={() => alert("Proceeding to secure checkout payment portal...")}>
+                  <button className={s.checkoutBtn} onClick={() => { setIsCartOpen(false); navigate('/checkout'); }}>
                     Proceed to Checkout
                   </button>
                 </div>

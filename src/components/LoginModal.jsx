@@ -97,36 +97,59 @@ export default function LoginModal({ isOpen, onClose }) {
 
   // Initialize and render Google Login button when container is visible
   useEffect(() => {
-    if (!isOpen || !googleLoaded || tab !== 'signup' || signupMethod !== null) return;
+    if (!isOpen || !googleLoaded) return;
 
-    const container = document.getElementById('google-signup-btn-container');
-    if (container && window.google) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id.apps.googleusercontent.com',
-          callback: async (response) => {
-            setLoading(true);
-            setError('');
-            setSuccess('');
-            const res = await googleLogin(response.credential);
-            if (res.success) {
-              setSuccess('Welcome to Āhāryā! Signed in successfully.');
-              setTimeout(onClose, 1200);
-            } else {
-              setError(res.error || 'Google authentication failed');
-            }
-            setLoading(false);
-          },
-        });
-        window.google.accounts.id.renderButton(container, {
-          theme: 'outline',
-          size: 'large',
-          text: 'signup_with',
-          shape: 'pill',
-          width: 376,
-        });
-      } catch (err) {
-        console.error('Failed to render Google Sign-In button:', err);
+    const handleGoogleAuth = async (response) => {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+      const res = await googleLogin(response.credential);
+      if (res.success) {
+        setSuccess('Welcome to Āhāryā! Signed in successfully.');
+        setTimeout(onClose, 1200);
+      } else {
+        setError(res.error || 'Google authentication failed');
+      }
+      setLoading(false);
+    };
+
+    if (tab === 'signup' && signupMethod === null) {
+      const container = document.getElementById('google-signup-btn-container');
+      if (container && window.google) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id.apps.googleusercontent.com',
+            callback: handleGoogleAuth,
+          });
+          window.google.accounts.id.renderButton(container, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signup_with',
+            shape: 'pill',
+            width: 376,
+          });
+        } catch (err) {
+          console.error('Failed to render Google Sign-Up button:', err);
+        }
+      }
+    } else if (tab === 'login') {
+      const container = document.getElementById('google-login-btn-container');
+      if (container && window.google) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id.apps.googleusercontent.com',
+            callback: handleGoogleAuth,
+          });
+          window.google.accounts.id.renderButton(container, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            shape: 'pill',
+            width: 376,
+          });
+        } catch (err) {
+          console.error('Failed to render Google Sign-In button:', err);
+        }
       }
     }
   }, [isOpen, tab, signupMethod, googleLoaded, googleLogin, onClose]);
@@ -195,6 +218,15 @@ export default function LoginModal({ isOpen, onClose }) {
               </div>
             ) : (
               <form className={s.form} onSubmit={handleSubmit} noValidate>
+                {tab === 'login' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', marginBottom: '8px' }}>
+                    <div id="google-login-btn-container" className={s.googleBtnContainer}></div>
+                    <div className={s.divider} style={{ width: '100%' }}>
+                      <span>or</span>
+                    </div>
+                  </div>
+                )}
+
                 {tab === 'signup' && signupMethod === 'email' && (
                   <button
                     type="button"

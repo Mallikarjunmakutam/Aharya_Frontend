@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 import api from '../services/api';
 import s from './ProductDetail.module.css';
 
@@ -25,21 +28,62 @@ const ArrowLeft = () => (
 
 export default function ProductDetail({ product, onBack }) {
   const { addToCart, toggleWishlist, isWishlisted, setIsCartOpen } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [detailProduct, setDetailProduct] = useState(null);
   const [activeMedia, setActiveMedia] = useState(null);
 
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+
+  // Review states
+  const [newRating, setNewRating] = useState(5);
+  const [reviewerName, setReviewerName] = useState(user?.full_name || '');
+  const [reviewComment, setReviewComment] = useState('');
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!reviewerName.trim() || !reviewComment.trim()) {
+      toast.error("Please fill in all review fields.");
+      return;
+    }
+
+    try {
+      await api.post('/products/reviews/', {
+        product: detailProduct?.id || product.id,
+        user_name: reviewerName,
+        rating: newRating,
+        comment: reviewComment
+      });
+
+      toast.success("Review submitted successfully!");
+      setReviewComment('');
+      
+      // Refetch details
+      const res = await api.get(`/products/${product.id}/`);
+      setDetailProduct(res.data);
+    } catch (err) {
+      toast.error("Failed to submit review.");
+    }
+  };
+
   const p = detailProduct ? {
     id: detailProduct.id,
     name: detailProduct.name,
     category: detailProduct.category?.name || 'Uncategorized',
-    price: parseFloat(detailProduct.discount_price || detailProduct.price),
-    originalPrice: detailProduct.discount_price ? parseFloat(detailProduct.price) : null,
+    price: detailProduct.discount_price && parseFloat(detailProduct.discount_price) > 0 
+      ? parseFloat(detailProduct.discount_price) 
+      : parseFloat(detailProduct.price),
+    originalPrice: detailProduct.discount_price && parseFloat(detailProduct.discount_price) > 0 
+      ? parseFloat(detailProduct.price) 
+      : null,
     rating: parseFloat(detailProduct.rating) || 0,
     reviews: detailProduct.total_reviews || 0,
-    image: detailProduct.main_image,
+    image: detailProduct.images?.find(img => img.is_main)?.image || detailProduct.images?.[0]?.image || '',
     badge: detailProduct.is_featured ? 'Featured' : '',
     description: detailProduct.description,
     colors: [],
@@ -74,8 +118,11 @@ export default function ProductDetail({ product, onBack }) {
   };
 
   const handleBuyNow = async () => {
-    await addToCart(p, quantity);
-    setIsCartOpen(true);
+    if (!user) {
+      toast.error("Please login to proceed with Buy Now.");
+      return;
+    }
+    navigate(`/checkout?buynow=true&product_id=${p.id}&qty=${quantity}`);
   };
 
   const disc = p.originalPrice && p.price 
@@ -94,6 +141,32 @@ export default function ProductDetail({ product, onBack }) {
         } else {
           setActiveMedia({ type: 'image', url: res.data.main_image || product?.image });
         }
+
+        // Fetch related products from same category
+        const catName = res.data.category?.name;
+        if (catName) {
+          try {
+            const relRes = await api.get('/products/', {
+              params: { category__name: catName }
+            });
+            const relList = (relRes.data.results || relRes.data)
+              .filter(item => item.id !== res.data.id)
+              .slice(0, 4)
+              .map(item => ({
+                id: item.id,
+                name: item.name,
+                slug: item.slug,
+                category: item.category?.name || 'Uncategorized',
+                price: item.discount_price && parseFloat(item.discount_price) > 0 
+                  ? parseFloat(item.discount_price) 
+                  : parseFloat(item.price),
+                image: item.images?.find(img => img.is_main)?.image || item.images?.[0]?.image || item.main_image || ''
+              }));
+            setRelatedProducts(relList);
+          } catch (relErr) {
+            console.error("Failed to fetch related products", relErr);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch product details", err);
         setDetailProduct(null);
@@ -108,10 +181,45 @@ export default function ProductDetail({ product, onBack }) {
     window.scrollTo(0, 0);
   }, [product?.id]);
 
-  if (loading && !p.name) {
+  // Track recently viewed products in local storage
+  useEffect(() => {
+    if (detailProduct) {
+      const stored = localStorage.getItem('aharya_recently_viewed');
+      let list = stored ? JSON.parse(stored) : [];
+      
+      list = list.filter(item => item.id !== detailProduct.id);
+      list.unshift({
+        id: detailProduct.id,
+        name: detailProduct.name,
+        slug: detailProduct.slug,
+        price: detailProduct.discount_price && parseFloat(detailProduct.discount_price) > 0 
+          ? parseFloat(detailProduct.discount_price) 
+          : parseFloat(detailProduct.price),
+        image: detailProduct.images?.find(img => img.is_main)?.image || detailProduct.images?.[0]?.image || '',
+        category: detailProduct.category?.name || 'Uncategorized'
+      });
+
+      if (list.length > 5) {
+        list = list.slice(0, 5);
+      }
+      localStorage.setItem('aharya_recently_viewed', JSON.stringify(list));
+      
+      // Update local state for display (excluding current product)
+      setRecentlyViewed(list.filter(item => item.id !== detailProduct.id).slice(0, 4));
+    }
+  }, [detailProduct]);
+
+  if (loading && !detailProduct) {
     return (
-      <div className={s.page} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <div style={{ fontSize: '1.25rem', color: 'var(--color-gold)', fontFamily: 'var(--font-heading)' }}>Loading product details...</div>
+      <div className={s.detailSkeleton}>
+        <div className={`${s.skeletonLeft} ${s.shimmer}`} />
+        <div className={s.skeletonRight}>
+          <div className={`${s.skeletonTitle} ${s.shimmer}`} />
+          <div className={`${s.skeletonLine} ${s.shimmer}`} style={{ width: '30%' }} />
+          <div className={`${s.skeletonLine} ${s.shimmer}`} style={{ width: '45%' }} />
+          <div className={`${s.skeletonLine} ${s.shimmer}`} style={{ width: '80%', height: '100px', marginTop: '30px' }} />
+          <div className={`${s.skeletonLine} ${s.shimmer}`} style={{ width: '60%', height: '50px', marginTop: '40px', borderRadius: '30px' }} />
+        </div>
       </div>
     );
   }
@@ -131,23 +239,58 @@ export default function ProductDetail({ product, onBack }) {
         <div className={s.content}>
           {/* Left: Images */}
           <div className={s.imageSection}>
-            <div className={s.mainImageWrap}>
-              {activeMedia?.type === 'video' ? (
-                <video 
-                  src={activeMedia.url} 
-                  className={s.mainImage} 
-                  controls 
-                  autoPlay 
-                  playsInline 
-                />
-              ) : (
-                <img 
-                  src={activeMedia?.url || p.image} 
-                  alt={p.name} 
-                  className={s.mainImage} 
-                />
+            <div className={s.mainImageWrap} style={{ position: 'relative', overflow: 'hidden' }}>
+              <img 
+                src="/assets/logo.jpg" 
+                alt="Aharya Logo" 
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '16px',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  border: '2px solid white',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                  zIndex: 10,
+                  objectFit: 'cover'
+                }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+
+              <AnimatePresence mode="wait">
+                {activeMedia?.type === 'video' ? (
+                  <motion.video 
+                    key={activeMedia.url}
+                    src={activeMedia.url} 
+                    className={s.mainImage} 
+                    controls 
+                    autoPlay 
+                    playsInline 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                  />
+                ) : (
+                  <motion.img 
+                    key={activeMedia?.url || p.image}
+                    src={activeMedia?.url || p.image} 
+                    alt={p.name} 
+                    className={s.mainImage}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {p.badge && (
+                <span className={s.badge} style={{ left: 'auto', right: '16px', top: '16px' }}>
+                  {p.badge}
+                </span>
               )}
-              {p.badge && <span className={s.badge}>{p.badge}</span>}
             </div>
             <div className={s.thumbnailList}>
               {loading ? (
@@ -289,7 +432,164 @@ export default function ProductDetail({ product, onBack }) {
 
           </div>
         </div>
+
+        {/* Ratings and Reviews Section */}
+        <div style={{ marginTop: '80px', borderTop: '1px solid #eee', paddingTop: '40px' }}>
+          <h2 style={{ fontFamily: 'var(--font-heading, serif)', fontSize: '2rem', marginBottom: '24px' }}>
+            Customer Reviews
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '60px', alignItems: 'start' }}>
+            {/* Reviews List */}
+            <div>
+              {(!detailProduct?.reviews || detailProduct.reviews.length === 0) ? (
+                <div style={{ color: '#888', fontStyle: 'italic', padding: '20px 0' }}>
+                  No reviews yet for this product. Be the first to review!
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {detailProduct.reviews.map(rev => (
+                    <div key={rev.id} style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <strong>{rev.user_name}</strong>
+                        <span style={{ color: 'var(--color-gold)', fontSize: '0.85rem' }}>
+                          {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                        </span>
+                      </div>
+                      <p style={{ color: '#555', margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>{rev.comment}</p>
+                      <span style={{ fontSize: '0.78rem', color: '#aaa' }}>{new Date(rev.created_at).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Review Form */}
+            <div style={{ background: '#fbfbf9', padding: '30px', borderRadius: '12px', border: '1px solid #f0f0f0' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading, serif)', fontSize: '1.35rem', marginBottom: '20px' }}>
+                Write a Review
+              </h3>
+              
+              <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Rating *
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <span 
+                        key={star} 
+                        onClick={() => setNewRating(star)}
+                        style={{ 
+                          fontSize: '1.5rem', 
+                          cursor: 'pointer', 
+                          color: star <= newRating ? 'var(--color-gold)' : '#ccc' 
+                        }}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Your Name *
+                  </label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={reviewerName}
+                    onChange={e => setReviewerName(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #ddd', borderRadius: '8px', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Comments *
+                  </label>
+                  <textarea 
+                    required 
+                    rows="3"
+                    value={reviewComment}
+                    onChange={e => setReviewComment(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #ddd', borderRadius: '8px', outline: 'none', resize: 'none' }}
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  style={{ 
+                    padding: '12px', 
+                    borderRadius: '30px', 
+                    background: 'black', 
+                    color: 'white', 
+                    border: 'none', 
+                    fontWeight: '600', 
+                    textTransform: 'uppercase', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  Submit Review
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {/* Related Products Section */}
+      {relatedProducts.length > 0 && (
+        <div className={s.carouselSection}>
+          <h2 className={s.carouselTitle}>You May Also Like</h2>
+          <div className={s.productGrid}>
+            {relatedProducts.map(item => (
+              <div 
+                key={item.id} 
+                className={s.productCard}
+                onClick={() => navigate(`/product/${item.slug}`)}
+              >
+                <div className={s.cardImageWrap}>
+                  <img src={item.image} alt={item.name} className={s.cardImage} onError={(e) => { e.target.src = '/assets/logo.jpg'; }} />
+                </div>
+                <div className={s.cardInfo}>
+                  <span className={s.cardCategory}>{item.category}</span>
+                  <h3 className={s.cardName}>{item.name}</h3>
+                  <span className={s.cardPrice}>₹{item.price.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recently Viewed Section */}
+      {recentlyViewed.length > 0 && (
+        <div className={s.carouselSection} style={{ marginTop: '60px' }}>
+          <h2 className={s.carouselTitle}>Recently Viewed</h2>
+          <div className={s.productGrid}>
+            {recentlyViewed.map(item => (
+              <div 
+                key={item.id} 
+                className={s.productCard}
+                onClick={() => navigate(`/product/${item.slug}`)}
+              >
+                <div className={s.cardImageWrap}>
+                  <img src={item.image} alt={item.name} className={s.cardImage} onError={(e) => { e.target.src = '/assets/logo.jpg'; }} />
+                </div>
+                <div className={s.cardInfo}>
+                  <span className={s.cardCategory}>{item.category}</span>
+                  <h3 className={s.cardName}>{item.name}</h3>
+                  <span className={s.cardPrice}>₹{item.price.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </motion.div>
   );
 }

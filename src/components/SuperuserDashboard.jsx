@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import s from './SuperuserDashboard.module.css';
 
@@ -72,6 +73,7 @@ const CameraIcon = () => (
 );
 
 export default function SuperuserDashboard({ setViewMode }) {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('overview');
     const [stats, setStats] = useState({
         total_users: 0,
@@ -295,10 +297,22 @@ export default function SuperuserDashboard({ setViewMode }) {
                 is_featured: product.is_featured || false,
                 is_active: product.is_active !== false
             });
-            // Fetch full details to get images and video
+            // Fetch full details to get images, video, fabric, description
             api.get(`/products/${product.id}/`).then(res => {
                 setProductImages(res.data.images || []);
                 setVideoPreview(res.data.video || null);
+                setProductForm({
+                    name: res.data.name,
+                    item_code: res.data.item_code || '',
+                    category_id: res.data.category?.id || res.data.category || '',
+                    fabric: res.data.fabric || '',
+                    price: res.data.price,
+                    discount_price: res.data.discount_price || '',
+                    stock: res.data.stock,
+                    description: res.data.description || '',
+                    is_featured: res.data.is_featured || false,
+                    is_active: res.data.is_active !== false
+                });
             });
             setSelectedLocalImages([]);
             setVideoFile(null);
@@ -555,7 +569,7 @@ export default function SuperuserDashboard({ setViewMode }) {
         <div className={s.dashboardContainer}>
             {/* Sidebar Navigation */}
             <aside className={s.sidebar}>
-                <div className={s.logoArea}>
+                <div className={s.logoArea} onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
                     <img src="/assets/logo.jpg" alt="Aharya" className={s.logoImg} onError={(e) => { e.target.style.display = 'none' }} />
                     <div className={s.logoText}>
                         <span className={s.logoName}>Āhāryā Panel</span>
@@ -591,7 +605,7 @@ export default function SuperuserDashboard({ setViewMode }) {
                 </nav>
 
                 <div className={s.sidebarFooter}>
-                    <button className={s.backBtn} onClick={() => setViewMode('shop')}>
+                    <button className={s.backBtn} onClick={() => navigate('/')}>
                         <BackIcon /> Back to Storefront
                     </button>
                 </div>
