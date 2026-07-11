@@ -132,7 +132,7 @@ export function CartProvider({ children }) {
   const isWishlisted = (id) => wishlistItems.some(i => i.id === id);
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, cartCount, wishlistItems, toggleWishlist, isWishlisted, isCartOpen, setIsCartOpen }}>
+    <CartContext.Provider value={{ cartItems, fetchCart, addToCart, removeFromCart, cartCount, wishlistItems, toggleWishlist, isWishlisted, isCartOpen, setIsCartOpen }}>
       {children}
     </CartContext.Provider>
   );

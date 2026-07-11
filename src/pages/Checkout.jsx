@@ -6,6 +6,21 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import api from '../services/api';
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    // If already loaded, resolve immediately
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function Checkout() {
   const { cartItems, fetchCart, setIsCartOpen } = useCart();
   const { user } = useAuth();
@@ -28,6 +43,12 @@ export default function Checkout() {
   });
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' or 'Online'
   const [placing, setPlacing] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login?redirect=%2Fcheckout');
+    }
+  }, [user, navigate]);
 
   // Fetch Buy Now product details directly
   useEffect(() => {
@@ -120,26 +141,83 @@ export default function Checkout() {
         toast.success("Order placed successfully via Cash on Delivery!");
         navigate('/orders');
       } else {
-        // Online Payment - Mock implementation
-        toast.success("Redirecting to payment portal...");
-        setTimeout(async () => {
-          try {
-            // Mock payment verification on backend
-            await api.post('/payments/verify/', {
-              razorpay_payment_id: 'pay_mock_' + Math.random().toString(36).substr(2, 9),
-              razorpay_order_id: createdOrder.razorpay_order_id || 'order_mock_' + Math.random().toString(36).substr(2, 9),
-              razorpay_signature: 'sig_mock_' + Math.random().toString(36).substr(2, 9),
-              clear_cart: !isBuyNow
-            });
-            
-            fetchCart();
-            toast.success("Payment verified! Order placed successfully.");
-            navigate('/orders');
-          } catch (payErr) {
-            toast.error("Payment verification failed.");
-            setPlacing(false);
+        // Online Payment using Razorpay
+        toast.info("Initializing payment gateway...");
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          toast.error("Failed to load Razorpay SDK. Check your internet connection.");
+          setPlacing(false);
+          return;
+        }
+
+        // 1. Create Razorpay Order on Backend
+        let razorpayOrder;
+        try {
+          const createOrderRes = await api.post('/payments/create-order/', {
+            order_id: createdOrder.id
+          });
+          razorpayOrder = createOrderRes.data;
+        } catch (createErr) {
+          console.error("Failed to create Razorpay order:", createErr);
+          toast.error(createErr.response?.data?.error || "Failed to initialize payment order.");
+          setPlacing(false);
+          return;
+        }
+
+        // 2. Open Razorpay Checkout popup
+        const options = {
+          key: razorpayOrder.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T9leOc5GMiLncg',
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          name: 'Āhāryā',
+          description: 'Saree Purchase Order',
+          image: '/assets/logo.jpg',
+          order_id: razorpayOrder.id,
+          handler: async function (response) {
+            toast.success("Payment authorized! Verifying...");
+            try {
+              await api.post('/payments/verify/', {
+                order_id: createdOrder.id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                clear_cart: !isBuyNow
+              });
+              
+              if (!isBuyNow) {
+                await api.post('/cart/clear/');
+              }
+              fetchCart();
+              toast.success("Payment verified! Order placed successfully.");
+              navigate('/orders');
+            } catch (verifyErr) {
+              console.error("Payment verification failed:", verifyErr);
+              toast.error("Payment verification failed. Please contact support.");
+              setPlacing(false);
+            }
+          },
+          prefill: {
+            name: shipping.fullName,
+            contact: shipping.phone,
+            email: user?.email || '',
+          },
+          notes: {
+            address: shipping.address,
+            order_id: createdOrder.id
+          },
+          theme: {
+            color: '#c8a84b'
+          },
+          modal: {
+            ondismiss: function () {
+              toast.info("Payment cancelled.");
+              setPlacing(false);
+            }
           }
-        }, 1500);
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
       }
     } catch (err) {
       console.error(err);

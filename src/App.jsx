@@ -21,6 +21,8 @@ import Account from './pages/Account';
 import Checkout from './pages/Checkout';
 import SizeGuide from './pages/SizeGuide';
 import Weavers from './pages/Weavers';
+import ScrollToTop from './components/ScrollToTop';
+import LoginPage from './pages/LoginPage';
 
 export default function App() {
   const location = useLocation();
@@ -39,6 +41,7 @@ export default function App() {
   return (
     <AuthProvider>
       <CartProvider>
+        <ScrollToTop />
         <Toaster position="top-right" richColors />
         
         {/* Premium Micro-Loading Screen */}
@@ -55,7 +58,7 @@ export default function App() {
                 zIndex: 9999,
                 display: 'flex',
                 alignItems: 'center',
-                justifycontent: 'center',
+                justifyContent: 'center',
                 flexDirection: 'column',
                 gap: '1.5rem',
                 paddingTop: '35vh'
@@ -99,7 +102,7 @@ export default function App() {
         ) : (
           <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Header />
-            <main style={{ flex: 1 }}>
+            <main style={{ flex: 1, opacity: pageLoading ? 0 : 1, transition: 'opacity 0.2s ease-in-out' }}>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/shop" element={<Shop />} />
@@ -112,11 +115,12 @@ export default function App() {
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/account" element={<Account />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/login" element={<LoginPage />} />
                 {/* Fallback route */}
                 <Route path="*" element={<Home />} />
               </Routes>
             </main>
-            <Footer />
+            {!pageLoading && <Footer />}
           </div>
         )}
       </CartProvider>

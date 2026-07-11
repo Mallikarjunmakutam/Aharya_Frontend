@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ export default function ProductDetail({ product, onBack }) {
   const { addToCart, toggleWishlist, isWishlisted, setIsCartOpen } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [added, setAdded] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -119,7 +120,8 @@ export default function ProductDetail({ product, onBack }) {
 
   const handleBuyNow = async () => {
     if (!user) {
-      toast.error("Please login to proceed with Buy Now.");
+      const target = encodeURIComponent(`/checkout?buynow=true&product_id=${p.id}&qty=${quantity}`);
+      navigate(`/login?redirect=${target}`);
       return;
     }
     navigate(`/checkout?buynow=true&product_id=${p.id}&qty=${quantity}`);
@@ -464,77 +466,109 @@ export default function ProductDetail({ product, onBack }) {
               )}
             </div>
 
-            {/* Review Form */}
-            <div style={{ background: '#fbfbf9', padding: '30px', borderRadius: '12px', border: '1px solid #f0f0f0' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading, serif)', fontSize: '1.35rem', marginBottom: '20px' }}>
-                Write a Review
-              </h3>
-              
-              <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
-                    Rating *
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <span 
-                        key={star} 
-                        onClick={() => setNewRating(star)}
-                        style={{ 
-                          fontSize: '1.5rem', 
-                          cursor: 'pointer', 
-                          color: star <= newRating ? 'var(--color-gold)' : '#ccc' 
-                        }}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                </div>
+             {/* Review Form */}
+             <div style={{ background: '#fbfbf9', padding: '30px', borderRadius: '12px', border: '1px solid #f0f0f0', minHeight: '260px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+               <h3 style={{ fontFamily: 'var(--font-heading, serif)', fontSize: '1.35rem', marginBottom: '20px' }}>
+                 Write a Review
+               </h3>
+               
+               {!user ? (
+                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                   <p style={{ color: '#666', marginBottom: '20px', fontSize: '0.95rem' }}>
+                     You must be signed in to leave a product review.
+                   </p>
+                   <button 
+                     onClick={() => navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`)}
+                     style={{ 
+                       padding: '10px 24px', 
+                       borderRadius: '30px', 
+                       background: 'black', 
+                       color: 'white', 
+                       border: 'none', 
+                       fontWeight: '600', 
+                       textTransform: 'uppercase', 
+                       cursor: 'pointer' 
+                     }}
+                   >
+                     Sign In
+                   </button>
+                 </div>
+               ) : !detailProduct?.has_purchased ? (
+                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                   <p style={{ color: 'var(--color-gold)', fontWeight: '600', marginBottom: '10px', fontSize: '1.1rem' }}>
+                     Purchase Required
+                   </p>
+                   <p style={{ color: '#666', margin: 0, fontSize: '0.95rem', lineHeight: '1.5' }}>
+                     Only customer accounts with a verified purchase of this saree can write a review.
+                   </p>
+                 </div>
+               ) : (
+                 <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                   <div>
+                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
+                       Rating *
+                     </label>
+                     <div style={{ display: 'flex', gap: '8px' }}>
+                       {[1, 2, 3, 4, 5].map(star => (
+                         <span 
+                           key={star} 
+                           onClick={() => setNewRating(star)}
+                           style={{ 
+                             fontSize: '1.5rem', 
+                             cursor: 'pointer', 
+                             color: star <= newRating ? 'var(--color-gold)' : '#ccc' 
+                           }}
+                         >
+                           ★
+                         </span>
+                       ))}
+                     </div>
+                   </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
-                    Your Name *
-                  </label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={reviewerName}
-                    onChange={e => setReviewerName(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #ddd', borderRadius: '8px', outline: 'none' }}
-                  />
-                </div>
+                   <div>
+                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
+                       Your Name *
+                     </label>
+                     <input 
+                       type="text" 
+                       required 
+                       value={reviewerName}
+                       onChange={e => setReviewerName(e.target.value)}
+                       style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #ddd', borderRadius: '8px', outline: 'none' }}
+                     />
+                   </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
-                    Comments *
-                  </label>
-                  <textarea 
-                    required 
-                    rows="3"
-                    value={reviewComment}
-                    onChange={e => setReviewComment(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #ddd', borderRadius: '8px', outline: 'none', resize: 'none' }}
-                  />
-                </div>
+                   <div>
+                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>
+                       Comments *
+                     </label>
+                     <textarea 
+                       required 
+                       rows="3"
+                       value={reviewComment}
+                       onChange={e => setReviewComment(e.target.value)}
+                       style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #ddd', borderRadius: '8px', outline: 'none', resize: 'none' }}
+                     />
+                   </div>
 
-                <button 
-                  type="submit" 
-                  style={{ 
-                    padding: '12px', 
-                    borderRadius: '30px', 
-                    background: 'black', 
-                    color: 'white', 
-                    border: 'none', 
-                    fontWeight: '600', 
-                    textTransform: 'uppercase', 
-                    cursor: 'pointer' 
-                  }}
-                >
-                  Submit Review
-                </button>
-              </form>
-            </div>
+                   <button 
+                     type="submit" 
+                     style={{ 
+                       padding: '12px', 
+                       borderRadius: '30px', 
+                       background: 'black', 
+                       color: 'white', 
+                       border: 'none', 
+                       fontWeight: '600', 
+                       textTransform: 'uppercase', 
+                       cursor: 'pointer' 
+                     }}
+                   >
+                     Submit Review
+                   </button>
+                 </form>
+               )}
+             </div>
           </div>
         </div>
 

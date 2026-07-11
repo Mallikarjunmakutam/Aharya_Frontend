@@ -372,7 +372,14 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
                     <span>Total Amount:</span>
                     <span>₹{cartItems.reduce((acc, item) => acc + (item.qty || 1) * parseFloat(item.price), 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <button className={s.checkoutBtn} onClick={() => { setIsCartOpen(false); navigate('/checkout'); }}>
+                  <button className={s.checkoutBtn} onClick={() => { 
+                    setIsCartOpen(false); 
+                    if (!user) {
+                      navigate('/login?redirect=%2Fcheckout');
+                    } else {
+                      navigate('/checkout');
+                    }
+                  }}>
                     Proceed to Checkout
                   </button>
                 </div>
