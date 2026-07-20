@@ -305,6 +305,7 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
               </div>
               <nav className={s.drawerNav}>
                 <a onClick={() => { setShowMobileMenu(false); navigate('/shop'); }}>Collections</a>
+                <a onClick={() => { setShowMobileMenu(false); setShowWishlistDrawer(true); }}>My Wishlist</a>
                 <a onClick={() => { setShowMobileMenu(false); navigate('/about'); }}>About Us</a>
                 <a onClick={() => { setShowMobileMenu(false); navigate('/blog'); }}>Blog</a>
                 <a onClick={() => { setShowMobileMenu(false); navigate('/contact'); }}>Contact Us</a>

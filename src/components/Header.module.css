@@ -456,28 +456,64 @@
   margin: var(--space-2) 0;
 }
 
-/* Mobile */
+/* Mobile & Responsiveness */
 @media (max-width: 1024px) {
   .centerNav { display: none; }
   .hamburgerBtn { display: flex; }
   .navLink { display: none !important; }
   .loginBtn { display: none !important; }
   .userMenu { display: none !important; }
+  .dividerLine { display: none !important; }
+  .contactBtn { display: none !important; }
 }
 
 @media (max-width: 768px) {
   .headerInner {
-    padding: 0 var(--space-4);
+    padding: 0 var(--space-3);
   }
-  .logoName { font-size: 1.3rem; }
-  .logoTagline { display: none; }
-  .logoImg { width: 38px; height: 38px; }
-  .dividerLine { display: none; }
-  .contactBtn { display: none; }
+  .logo {
+    gap: 8px;
+  }
+  .logoName { 
+    font-size: 1.25rem; 
+  }
+  .logoTagline { 
+    display: none; 
+  }
+  .logoImg { 
+    width: 36px; 
+    height: 36px; 
+  }
+  .iconBtn, .hamburgerBtn {
+    width: 36px;
+    height: 36px;
+  }
+  .navActions {
+    gap: 4px;
+  }
 }
 
 @media (max-width: 480px) {
-  .navActions { gap: 6px; }
+  .headerInner {
+    padding: 0 var(--space-2);
+  }
+  .logo {
+    gap: 6px;
+  }
+  .logoName { 
+    font-size: 1.15rem; 
+  }
+  .logoImg { 
+    width: 32px; 
+    height: 32px; 
+  }
+  .iconBtn, .hamburgerBtn {
+    width: 32px;
+    height: 32px;
+  }
+  .navActions { 
+    gap: 2px; 
+  }
 }
 
 .drawerBody {
