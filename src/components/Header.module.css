@@ -94,6 +94,7 @@
   cursor: pointer;
   text-transform: uppercase;
   transition: color var(--duration-fast) var(--ease);
+  margin-right: 16px;
 }
 
 .navLink::after {
@@ -459,6 +460,9 @@
 @media (max-width: 1024px) {
   .centerNav { display: none; }
   .hamburgerBtn { display: flex; }
+  .navLink { display: none !important; }
+  .loginBtn { display: none !important; }
+  .userMenu { display: none !important; }
 }
 
 @media (max-width: 768px) {
@@ -473,8 +477,7 @@
 }
 
 @media (max-width: 480px) {
-  .navActions { gap: 2px; }
-  .loginBtn { display: none; }
+  .navActions { gap: 6px; }
 }
 
 .drawerBody {

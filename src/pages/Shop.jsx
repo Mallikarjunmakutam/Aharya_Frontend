@@ -7,6 +7,7 @@ export default function Shop() {
 
   const searchQuery = searchParams.get('search') || '';
   const activeCategory = searchParams.get('category') || 'All';
+  const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
   const handleSetActiveCategory = (category) => {
     const params = {};
@@ -15,6 +16,21 @@ export default function Shop() {
     }
     if (searchQuery) {
       params.search = searchQuery;
+    }
+    // Changing filters resets the page back to 1
+    setSearchParams(params);
+  };
+
+  const handleSetCurrentPage = (page) => {
+    const params = {};
+    if (activeCategory && activeCategory !== 'All') {
+      params.category = activeCategory;
+    }
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
+    if (page > 1) {
+      params.page = page.toString();
     }
     setSearchParams(params);
   };
@@ -28,6 +44,8 @@ export default function Shop() {
       searchQuery={searchQuery}
       activeCategory={activeCategory}
       setActiveCategory={handleSetActiveCategory}
+      currentPage={currentPage}
+      setCurrentPage={handleSetCurrentPage}
       onSelectProduct={handleSelectProduct}
     />
   );

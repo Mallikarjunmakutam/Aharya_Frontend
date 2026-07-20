@@ -112,17 +112,29 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
   );
 }
 
-export default function ProductSection({ searchQuery = '', activeCategory = 'All', setActiveCategory, onSelectProduct }) {
+export default function ProductSection({
+  searchQuery = '',
+  activeCategory = 'All',
+  setActiveCategory,
+  currentPage: propCurrentPage,
+  setCurrentPage: propSetCurrentPage,
+  onSelectProduct
+}) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(["All"]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Reset page when search or category changes
+  const currentPage = propCurrentPage !== undefined ? propCurrentPage : localCurrentPage;
+  const setCurrentPage = propSetCurrentPage !== undefined ? propSetCurrentPage : setLocalCurrentPage;
+
+  // Reset page when search or category changes (only when using local state)
   useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategory, searchQuery]);
+    if (propCurrentPage === undefined) {
+      setLocalCurrentPage(1);
+    }
+  }, [activeCategory, searchQuery, propCurrentPage]);
 
   useEffect(() => {
     const fetchData = async () => {

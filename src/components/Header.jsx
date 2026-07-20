@@ -173,7 +173,6 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
             <button 
               className={`${s.navLink} ${location.pathname === '/about' ? s.activeLink : ''}`} 
               onClick={() => navigate('/about')}
-              style={{ marginRight: '16px' }}
             >
               About Us
             </button>
@@ -310,7 +309,19 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
                 <a onClick={() => { setShowMobileMenu(false); navigate('/blog'); }}>Blog</a>
                 <a onClick={() => { setShowMobileMenu(false); navigate('/contact'); }}>Contact Us</a>
                 <div className={s.drawerDivider} />
-                <a onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login / Signup</a>
+                {user ? (
+                  <>
+                    <a onClick={() => { setShowMobileMenu(false); navigate('/account'); }}>My Account</a>
+                    <a onClick={() => { setShowMobileMenu(false); navigate('/orders'); }}>My Orders</a>
+                    {user?.is_staff && (
+                      <a onClick={() => { setShowMobileMenu(false); navigate('/superuser'); }}>Superuser Panel</a>
+                    )}
+                    <div className={s.drawerDivider} />
+                    <a onClick={() => { setShowMobileMenu(false); logout(); }}>Sign Out ({user.name || user.full_name || 'User'})</a>
+                  </>
+                ) : (
+                  <a onClick={() => { setShowMobileMenu(false); setShowLogin(true); }}>Login / Signup</a>
+                )}
               </nav>
             </motion.div>
           </>

@@ -162,7 +162,7 @@ export default function SuperuserDashboard({ setViewMode }) {
     const fetchOrders = async () => {
         try {
             setLoadingOrders(true);
-            const res = await api.get('/orders/');
+            const res = await api.get('/orders/', { params: { no_pagination: 'true' } });
             setOrders(res.data.results || res.data || []);
         } catch (e) {
             console.error("Error fetching admin orders", e);
@@ -175,7 +175,7 @@ export default function SuperuserDashboard({ setViewMode }) {
     const fetchProducts = async () => {
         try {
             setLoadingProducts(true);
-            const res = await api.get('/products/');
+            const res = await api.get('/products/', { params: { no_pagination: 'true' } });
             setProducts(res.data.results || res.data || []);
         } catch (e) {
             console.error("Error fetching admin products", e);
@@ -197,7 +197,7 @@ export default function SuperuserDashboard({ setViewMode }) {
     const fetchUsers = async () => {
         try {
             setLoadingUsers(true);
-            const res = await api.get('/users/admin-users/');
+            const res = await api.get('/users/admin-users/', { params: { no_pagination: 'true' } });
             setUsers(res.data.results || res.data || []);
         } catch (e) {
             console.error("Error fetching admin users", e);
@@ -631,18 +631,52 @@ export default function SuperuserDashboard({ setViewMode }) {
 
                 {/* Tab Specific Content */}
                 {activeTab === 'overview' && (
-                    <>
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                        style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}
+                    >
                         {/* Stat Cards */}
-                        <div className={s.statsGrid}>
-                            <div className={`${s.statCard} ${s.statCardIncome}`}>
+                        <motion.div
+                            className={s.statsGrid}
+                            variants={{
+                                hidden: { opacity: 0 },
+                                show: {
+                                    opacity: 1,
+                                    transition: {
+                                        staggerChildren: 0.05
+                                    }
+                                }
+                            }}
+                            initial="hidden"
+                            animate="show"
+                        >
+                            <motion.div
+                                className={`${s.statCard} ${s.statCardIncome}`}
+                                variants={{
+                                    hidden: { opacity: 0, y: 15 },
+                                    show: { opacity: 1, y: 0 }
+                                }}
+                                whileHover={{ y: -4, scale: 1.01 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                            >
                                 <div className={s.statInfo}>
                                     <span className={s.statLabel}>Total Income</span>
                                     <span className={s.statValue}>₹{parseFloat(stats.total_sales).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className={`${s.statIcon} ${s.incomeIcon}`}>₹</div>
-                            </div>
+                            </motion.div>
 
-                            <div className={`${s.statCard} ${s.statCardOrders}`}>
+                            <motion.div
+                                className={`${s.statCard} ${s.statCardOrders}`}
+                                variants={{
+                                    hidden: { opacity: 0, y: 15 },
+                                    show: { opacity: 1, y: 0 }
+                                }}
+                                whileHover={{ y: -4, scale: 1.01 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                            >
                                 <div className={s.statInfo}>
                                     <span className={s.statLabel}>Total Orders</span>
                                     <span className={s.statValue}>{stats.total_orders}</span>
@@ -650,9 +684,17 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 <div className={`${s.statIcon} ${s.ordersIcon}`}>
                                     <OrdersIcon />
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            <div className={`${s.statCard} ${s.statCardUsers}`}>
+                            <motion.div
+                                className={`${s.statCard} ${s.statCardUsers}`}
+                                variants={{
+                                    hidden: { opacity: 0, y: 15 },
+                                    show: { opacity: 1, y: 0 }
+                                }}
+                                whileHover={{ y: -4, scale: 1.01 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                            >
                                 <div className={s.statInfo}>
                                     <span className={s.statLabel}>Total Customers</span>
                                     <span className={s.statValue}>{stats.total_users}</span>
@@ -660,16 +702,24 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 <div className={`${s.statIcon} ${s.usersIcon}`}>
                                     <UsersIcon />
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            <div className={`${s.statCard} ${s.statCardStock}`}>
+                            <motion.div
+                                className={`${s.statCard} ${s.statCardStock}`}
+                                variants={{
+                                    hidden: { opacity: 0, y: 15 },
+                                    show: { opacity: 1, y: 0 }
+                                }}
+                                whileHover={{ y: -4, scale: 1.01 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                            >
                                 <div className={s.statInfo}>
                                     <span className={s.statLabel}>Low Stock Items</span>
                                     <span className={s.statValue}>{stats.low_stock_products}</span>
                                 </div>
                                 <div className={`${s.statIcon} ${s.stockIcon}`}>!</div>
-                            </div>
-                        </div>
+                            </motion.div>
+                        </motion.div>
 
                         {/* Grid of Chart & Alerts */}
                         <div className={s.contentGrid}>
@@ -794,11 +844,16 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 </table>
                             </div>
                         </div>
-                    </>
+                    </motion.div>
                 )}
 
                 {activeTab === 'orders' && (
-                    <div className={s.glassCard}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className={s.glassCard}
+                    >
                         <div className={s.controlsRow}>
                             <div className={s.searchWrapper}>
                                 <span className={s.searchIcon}><SearchIcon /></span>
@@ -898,11 +953,16 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    </motion.div>
                 )}
 
                 {activeTab === 'products' && (
-                    <div className={s.glassCard}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className={s.glassCard}
+                    >
                         <div className={s.controlsRow}>
                             <div className={s.searchWrapper}>
                                 <span className={s.searchIcon}><SearchIcon /></span>
@@ -1007,11 +1067,16 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    </motion.div>
                 )}
 
                 {activeTab === 'users' && (
-                    <div className={s.glassCard}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className={s.glassCard}
+                    >
                         <div className={s.controlsRow}>
                             <div className={s.searchWrapper}>
                                 <span className={s.searchIcon}><SearchIcon /></span>
@@ -1080,7 +1145,7 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    </motion.div>
                 )}
             </main>
 
@@ -1089,8 +1154,21 @@ export default function SuperuserDashboard({ setViewMode }) {
             {/* Orders Item details overlay */}
             <AnimatePresence>
                 {showOrderModal && selectedOrder && (
-                    <div className={s.modalOverlay} onClick={() => setShowOrderModal(false)}>
-                        <div className={s.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <motion.div 
+                        className={s.modalOverlay} 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowOrderModal(false)}
+                    >
+                        <motion.div 
+                            className={s.modalContent} 
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className={s.modalHeader}>
                                 <h3 className={s.modalTitle}>Order Breakdown: {selectedOrder.id.slice(0, 16)}...</h3>
                                 <button className={s.modalClose} onClick={() => setShowOrderModal(false)}><CloseIcon /></button>
@@ -1141,19 +1219,32 @@ export default function SuperuserDashboard({ setViewMode }) {
                                 </div>
                             </div>
 
-                            <div className={s.modalFooter}>
+                             <div className={s.modalFooter}>
                                 <button className={s.secondaryBtn} onClick={() => setShowOrderModal(false)}>Close</button>
                             </div>
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Add / Edit Product Modal */}
             <AnimatePresence>
                 {showProductModal && (
-                    <div className={s.modalOverlay} onClick={() => setShowProductModal(false)}>
-                        <div className={s.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <motion.div 
+                        className={s.modalOverlay} 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowProductModal(false)}
+                    >
+                        <motion.div 
+                            className={s.modalContent} 
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className={s.modalHeader}>
                                 <h3 className={s.modalTitle}>{editingProduct ? `Edit Product: ${editingProduct.name}` : "Add New Garment to Catalog"}</h3>
                                 <button className={s.modalClose} onClick={() => setShowProductModal(false)}><CloseIcon /></button>
@@ -1357,13 +1448,13 @@ export default function SuperuserDashboard({ setViewMode }) {
 
                                 </div>
 
-                                <div className={s.modalFooter}>
+                                 <div className={s.modalFooter}>
                                     <button type="button" className={s.secondaryBtn} onClick={() => setShowProductModal(false)}>Cancel</button>
                                     <button type="submit" className={s.primaryBtn}>Save Product</button>
                                 </div>
                             </form>
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
