@@ -54,19 +54,42 @@ export default function Checkout() {
   useEffect(() => {
     if (isBuyNow && buyNowProductId) {
       setLoading(true);
+      const buyNowVariantId = searchParams.get('variant_id');
       api.get(`/products/${buyNowProductId}/`)
         .then(res => {
           const p = res.data;
+          let selectedVariant = null;
+          if (buyNowVariantId && p.variants) {
+            selectedVariant = p.variants.find(v => v.id === buyNowVariantId);
+          }
+          
+          const variantPrice = selectedVariant 
+            ? (selectedVariant.discount_price && parseFloat(selectedVariant.discount_price) > 0 ? parseFloat(selectedVariant.discount_price) : parseFloat(selectedVariant.price)) 
+            : null;
+          const basePrice = p.discount_price && parseFloat(p.discount_price) > 0 
+            ? parseFloat(p.discount_price) 
+            : parseFloat(p.price);
+          const price = variantPrice !== null && !isNaN(variantPrice) ? variantPrice : basePrice;
+
+          const variantOrig = selectedVariant 
+            ? (selectedVariant.discount_price && parseFloat(selectedVariant.discount_price) > 0 ? parseFloat(selectedVariant.price) : null)
+            : null;
+          const baseOrig = p.discount_price && parseFloat(p.discount_price) > 0 
+            ? parseFloat(p.price) 
+            : null;
+          const originalPrice = variantOrig !== null ? variantOrig : baseOrig;
+
+          const varImage = selectedVariant?.images?.find(img => img.is_main)?.image || selectedVariant?.images?.[0]?.image;
+          const image = varImage || p.images?.find(img => img.is_main)?.image || p.images?.[0]?.image || '';
+          
           const parsedProduct = {
             id: p.id,
-            name: p.name,
-            price: p.discount_price && parseFloat(p.discount_price) > 0 
-              ? parseFloat(p.discount_price) 
-              : parseFloat(p.price),
-            originalPrice: p.discount_price && parseFloat(p.discount_price) > 0 
-              ? parseFloat(p.price) 
-              : null,
-            image: p.images?.find(img => img.is_main)?.image || p.images?.[0]?.image || '',
+            productId: p.id,
+            variantId: selectedVariant?.id || null,
+            name: p.name + (selectedVariant?.color_name ? ` - ${selectedVariant.color_name}` : ''),
+            price,
+            originalPrice,
+            image,
             qty: parseInt(searchParams.get('qty') || 1)
           };
           setBuyNowProduct(parsedProduct);
@@ -126,6 +149,9 @@ export default function Checkout() {
       if (isBuyNow && buyNowProductId) {
         orderPayload.buy_now_product_id = buyNowProductId;
         orderPayload.buy_now_qty = parseInt(searchParams.get('qty') || 1);
+        if (buyNowProduct?.variantId) {
+          orderPayload.buy_now_variant_id = buyNowProduct.variantId;
+        }
       }
 
       // Create Order in backend

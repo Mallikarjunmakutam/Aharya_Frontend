@@ -1,7 +1,7 @@
 import HeroSection from '../components/HeroSection';
 import ModelCarousel from '../components/ModelCarousel';
 import AboutSection from '../components/AboutSection';
-import SocialSection from '../components/SocialSection';
+import FeaturedProducts from '../components/FeaturedProducts';
 
 export default function Home() {
   return (
@@ -9,7 +9,7 @@ export default function Home() {
       <HeroSection />
       <ModelCarousel />
       <AboutSection />
-      <SocialSection />
+      <FeaturedProducts />
     </>
   );
 }

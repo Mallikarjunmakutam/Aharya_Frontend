@@ -285,19 +285,6 @@ export default function SuperuserDashboard({ setViewMode }) {
     const openProductModal = (product = null) => {
         if (product) {
             setEditingProduct(product);
-            setProductForm({
-                name: product.name,
-                item_code: product.item_code || '',
-                category_id: product.category?.id || '',
-                fabric: product.fabric || '',
-                price: product.price,
-                discount_price: product.discount_price || '',
-                stock: product.stock,
-                description: product.description || '',
-                is_featured: product.is_featured || false,
-                is_active: product.is_active !== false
-            });
-            // Fetch full details to get images, video, fabric, description
             api.get(`/products/${product.id}/`).then(res => {
                 setProductImages(res.data.images || []);
                 setVideoPreview(res.data.video || null);
@@ -311,7 +298,18 @@ export default function SuperuserDashboard({ setViewMode }) {
                     stock: res.data.stock,
                     description: res.data.description || '',
                     is_featured: res.data.is_featured || false,
-                    is_active: res.data.is_active !== false
+                    is_active: res.data.is_active !== false,
+                    variants: res.data.variants ? res.data.variants.map(v => ({
+                        id: v.id,
+                        color_name: v.color_name,
+                        color_code: v.color_code || '#E5E7EB',
+                        price: v.price || '',
+                        discount_price: v.discount_price || '',
+                        stock: v.stock || 0,
+                        sku: v.sku || '',
+                        images: v.images || [],
+                        localImages: []
+                    })) : []
                 });
             });
             setSelectedLocalImages([]);
@@ -328,7 +326,8 @@ export default function SuperuserDashboard({ setViewMode }) {
                 stock: 0,
                 description: '',
                 is_featured: false,
-                is_active: true
+                is_active: true,
+                variants: []
             });
             setProductImages([]);
             setSelectedLocalImages([]);
@@ -342,11 +341,33 @@ export default function SuperuserDashboard({ setViewMode }) {
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         try {
+            const variantsPayload = productForm.variants.map(v => {
+                const parsed = {
+                    color_name: v.color_name,
+                    color_code: v.color_code,
+                    sku: v.sku,
+                    stock: parseInt(v.stock, 10) || 0,
+                    price: v.price ? parseFloat(v.price) : null,
+                    discount_price: v.discount_price ? parseFloat(v.discount_price) : null
+                };
+                if (v.id) {
+                    parsed.id = v.id;
+                }
+                return parsed;
+            });
+
             const data = {
-                ...productForm,
+                name: productForm.name,
+                item_code: productForm.item_code,
+                category_id: productForm.category_id,
+                fabric: productForm.fabric,
                 price: parseFloat(productForm.price),
                 discount_price: productForm.discount_price ? parseFloat(productForm.discount_price) : null,
-                stock: parseInt(productForm.stock, 10)
+                stock: parseInt(productForm.stock, 10) || 0,
+                description: productForm.description,
+                is_featured: productForm.is_featured,
+                is_active: productForm.is_active,
+                variants: variantsPayload
             };
 
             let createdProduct = null;
@@ -373,21 +394,27 @@ export default function SuperuserDashboard({ setViewMode }) {
                 }
             }
 
-            // Upload selected images after product is created
-            if (selectedLocalImages.length > 0 && createdProduct) {
-                for (const img of selectedLocalImages) {
-                    const formData = new FormData();
-                    formData.append('product', createdProduct.id);
-                    formData.append('image', img.file);
-                    formData.append('is_main', img.isMain ? 'true' : 'false');
-                    formData.append('alt_text', createdProduct.name);
+            // Upload variant-specific images
+            for (let i = 0; i < productForm.variants.length; i++) {
+                const localVar = productForm.variants[i];
+                if (localVar.localImages && localVar.localImages.length > 0) {
+                    const savedVar = createdProduct.variants.find(v => v.sku === localVar.sku) || createdProduct.variants[i];
+                    if (savedVar) {
+                        for (const img of localVar.localImages) {
+                            const formData = new FormData();
+                            formData.append('variant', savedVar.id);
+                            formData.append('image', img.file);
+                            formData.append('is_main', img.isMain ? 'true' : 'false');
+                            formData.append('alt_text', `${createdProduct.name} - ${savedVar.color_name}`);
 
-                    try {
-                        await api.post('/products/images/', formData, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
-                        });
-                    } catch (imageErr) {
-                        console.error('Failed to upload image during creation', imageErr);
+                            try {
+                                await api.post('/products/images/', formData, {
+                                    headers: { 'Content-Type': 'multipart/form-data' }
+                                });
+                            } catch (imageErr) {
+                                console.error('Failed to upload variant image', imageErr);
+                            }
+                        }
                     }
                 }
             }
@@ -414,80 +441,122 @@ export default function SuperuserDashboard({ setViewMode }) {
         }
     };
 
-    // Product Image Upload
-    const handleImageUpload = async (e) => {
+    // Color Variant Actions
+    const handleAddVariantRow = () => {
+        setProductForm(prev => ({
+            ...prev,
+            variants: [
+                ...prev.variants,
+                {
+                    color_name: '',
+                    color_code: '#E5E7EB',
+                    price: '',
+                    discount_price: '',
+                    stock: 0,
+                    sku: '',
+                    images: [],
+                    localImages: []
+                }
+            ]
+        }));
+    };
+
+    const handleRemoveVariantRow = (index) => {
+        setProductForm(prev => ({
+            ...prev,
+            variants: prev.variants.filter((_, i) => i !== index)
+        }));
+    };
+
+    const handleVariantChange = (index, field, value) => {
+        setProductForm(prev => {
+            const updated = [...prev.variants];
+            updated[index] = { ...updated[index], [field]: value };
+            return { ...prev, variants: updated };
+        });
+    };
+
+    const handleVariantImageUpload = (e, index) => {
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
 
-        if (editingProduct) {
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('product', editingProduct.id);
-                formData.append('image', file);
-                formData.append('is_main', (productImages.length === 0 && selectedLocalImages.length === 0) ? 'true' : 'false');
-                formData.append('alt_text', editingProduct.name);
+        const newImages = files.map((file, idx) => ({
+            file,
+            previewUrl: URL.createObjectURL(file),
+            isMain: false
+        }));
 
-                try {
-                    const res = await api.post('/products/images/', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
-                    });
-                    setProductImages(prev => [...prev, res.data]);
-                } catch (err) {
-                    console.error("Failed to upload image", err);
-                }
+        setProductForm(prev => {
+            const updated = [...prev.variants];
+            updated[index].localImages = [...updated[index].localImages, ...newImages];
+            if (updated[index].images.length === 0 && updated[index].localImages.length === newImages.length) {
+                updated[index].localImages[0].isMain = true;
             }
-            fetchProducts();
-        } else {
-            const newImages = files.map((file, idx) => ({
-                file,
-                previewUrl: URL.createObjectURL(file),
-                isMain: (selectedLocalImages.length === 0 && idx === 0)
-            }));
-            setSelectedLocalImages(prev => [...prev, ...newImages]);
-        }
+            return { ...prev, variants: updated };
+        });
     };
 
-    // Toggle Main Product Image
-    const handleSetMainImage = async (imageId) => {
-        if (!editingProduct) return;
-        try {
-            await api.patch(`/products/images/${imageId}/`, { is_main: true });
-            // Refetch images to update UI
-            const res = await api.get(`/products/${editingProduct.id}/`);
-            setProductImages(res.data.images || []);
-            fetchProducts();
-        } catch (err) {
-            console.error("Failed to set main image", err);
-        }
-    };
-
-    // Delete Product Image
-    const handleDeleteImage = async (imageId) => {
-        try {
-            await api.delete(`/products/images/${imageId}/`);
-            setProductImages(prev => prev.filter(img => img.id !== imageId));
-            fetchProducts();
-        } catch (err) {
-            console.error("Failed to delete image", err);
-        }
-    };
-
-    // Local Image Actions (for creation / additions before saving)
-    const handleSetLocalMainImage = (index) => {
-        setSelectedLocalImages(prev => prev.map((img, i) => ({
-            ...img,
-            isMain: i === index
-        })));
-    };
-
-    const handleDeleteLocalImage = (index) => {
-        setSelectedLocalImages(prev => {
-            const filtered = prev.filter((_, i) => i !== index);
-            if (prev[index]?.isMain && filtered.length > 0) {
+    const handleRemoveVariantLocalImage = (varIndex, imgIndex) => {
+        setProductForm(prev => {
+            const updated = [...prev.variants];
+            const filtered = updated[varIndex].localImages.filter((_, i) => i !== imgIndex);
+            if (updated[varIndex].localImages[imgIndex]?.isMain && filtered.length > 0) {
                 filtered[0].isMain = true;
             }
-            return filtered;
+            updated[varIndex].localImages = filtered;
+            return { ...prev, variants: updated };
         });
+    };
+
+    const handleSetVariantLocalMainImage = (varIndex, imgIndex) => {
+        setProductForm(prev => {
+            const updated = [...prev.variants];
+            updated[varIndex].images = updated[varIndex].images.map(img => ({ ...img, is_main: false }));
+            updated[varIndex].localImages = updated[varIndex].localImages.map((img, i) => ({
+                ...img,
+                isMain: i === imgIndex
+            }));
+            return { ...prev, variants: updated };
+        });
+    };
+
+    const handleSetVariantExistingMainImage = async (varIndex, imageId) => {
+        try {
+            await api.patch(`/products/images/${imageId}/`, { is_main: true });
+            if (editingProduct) {
+                const res = await api.get(`/products/${editingProduct.id}/`);
+                setProductForm(prev => {
+                    const updated = prev.variants.map(v => {
+                        const backendVar = res.data.variants?.find(bv => bv.id === v.id);
+                        if (backendVar) {
+                            return {
+                                ...v,
+                                images: backendVar.images || []
+                            };
+                        }
+                        return v;
+                    });
+                    return { ...prev, variants: updated };
+                });
+            }
+            fetchProducts();
+        } catch (err) {
+            console.error("Failed to set variant main image", err);
+        }
+    };
+
+    const handleDeleteVariantImage = async (varIndex, imageId) => {
+        try {
+            await api.delete(`/products/images/${imageId}/`);
+            setProductForm(prev => {
+                const updated = [...prev.variants];
+                updated[varIndex].images = updated[varIndex].images.filter(img => img.id !== imageId);
+                return { ...prev, variants: updated };
+            });
+            fetchProducts();
+        } catch (err) {
+            console.error("Failed to delete variant image", err);
+        }
     };
 
     const getSalesChartData = () => {
@@ -1365,54 +1434,180 @@ export default function SuperuserDashboard({ setViewMode }) {
                                             />
                                         </div>
                                     </div>
-
-                                    {/* Product Image Manager */}
-                                    <div className={s.imagesSection}>
-                                        <h4 className={s.formLabel} style={{ marginBottom: '0.75rem' }}>Product Photos</h4>
-
-                                        <div className={s.imagesGrid}>
-                                            {/* Backend-saved images (Edit Mode) */}
-                                            {editingProduct && productImages.map(img => (
-                                                <div className={s.imgWrapper} key={img.id}>
-                                                    <img src={img.image} alt="" className={s.gridImg} />
-                                                    {img.is_main && <span className={s.mainBadge}>Main</span>}
-                                                    <div className={s.imgOverlay}>
-                                                        {!img.is_main && (
-                                                            <button type="button" className={`${s.imgOverlayBtn} ${s.imgOverlayBtnMain}`} title="Set as Main" onClick={() => handleSetMainImage(img.id)}>
-                                                                ✓
-                                                            </button>
-                                                        )}
-                                                        <button type="button" className={s.imgOverlayBtn} title="Delete Image" onClick={() => handleDeleteImage(img.id)}>
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-
-                                            {/* Local selected images (Add / Edit Mode before save) */}
-                                            {selectedLocalImages.map((img, idx) => (
-                                                <div className={s.imgWrapper} key={idx}>
-                                                    <img src={img.previewUrl} alt="" className={s.gridImg} />
-                                                    {img.isMain && <span className={s.mainBadge}>Main</span>}
-                                                    <div className={s.imgOverlay}>
-                                                        {!img.isMain && (
-                                                            <button type="button" className={`${s.imgOverlayBtn} ${s.imgOverlayBtnMain}`} title="Set as Main" onClick={() => handleSetLocalMainImage(idx)}>
-                                                                ✓
-                                                            </button>
-                                                        )}
-                                                        <button type="button" className={s.imgOverlayBtn} title="Remove Image" onClick={() => handleDeleteLocalImage(idx)}>
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-
-                                            <label className={s.uploadWrapper}>
-                                                <CameraIcon />
-                                                <span className={s.uploadText}>Upload Photos</span>
-                                                <input type="file" accept="image/*" multiple className={s.uploadInput} onChange={handleImageUpload} />
-                                            </label>
+                                    {/* Color Variants Section */}
+                                    <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h4 className={s.formLabel} style={{ margin: 0 }}>Color Variants</h4>
+                                            <button 
+                                                type="button" 
+                                                className={s.primaryBtn} 
+                                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} 
+                                                onClick={handleAddVariantRow}
+                                            >
+                                                + Add Color Variant
+                                            </button>
                                         </div>
+
+                                        {productForm.variants?.length === 0 ? (
+                                            <div style={{ padding: '1.5rem', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '8px', color: '#94a3b8', fontSize: '0.9rem', textAlign: 'center' }}>
+                                                No color variants defined. At least one variant is recommended.
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                                {productForm.variants.map((variant, vIdx) => (
+                                                    <div 
+                                                        key={vIdx} 
+                                                        style={{ 
+                                                            background: 'rgba(255, 255, 255, 0.02)', 
+                                                            border: '1px solid rgba(255, 255, 255, 0.06)', 
+                                                            borderRadius: '12px', 
+                                                            padding: '1.25rem' 
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                                            <strong style={{ color: '#c8a84b' }}>Variant #{vIdx + 1} {variant.color_name ? `(${variant.color_name})` : ''}</strong>
+                                                            <button 
+                                                                type="button" 
+                                                                className={s.actionBtn} 
+                                                                style={{ padding: '0.2rem 0.5rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                                                onClick={() => handleRemoveVariantRow(vIdx)}
+                                                            >
+                                                                Remove Variant
+                                                            </button>
+                                                        </div>
+
+                                                        <div className={s.formGrid}>
+                                                            <div className={s.formGroup}>
+                                                                <label className={s.formLabel}>Color Name *</label>
+                                                                <input
+                                                                    type="text"
+                                                                    required
+                                                                    placeholder="e.g. Mustard Yellow"
+                                                                    className={s.formInput}
+                                                                    value={variant.color_name}
+                                                                    onChange={(e) => handleVariantChange(vIdx, 'color_name', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className={s.formGroup}>
+                                                                <label className={s.formLabel}>Color Hex Code *</label>
+                                                                <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                                                    <input
+                                                                        type="color"
+                                                                        className={s.formInput}
+                                                                        style={{ width: '40px', padding: '0', height: '38px', cursor: 'pointer' }}
+                                                                        value={variant.color_code || '#e5e7eb'}
+                                                                        onChange={(e) => handleVariantChange(vIdx, 'color_code', e.target.value)}
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        required
+                                                                        placeholder="#FFFFFF"
+                                                                        maxLength="7"
+                                                                        className={s.formInput}
+                                                                        style={{ flex: 1 }}
+                                                                        value={variant.color_code}
+                                                                        onChange={(e) => handleVariantChange(vIdx, 'color_code', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className={s.formGroup}>
+                                                                <label className={s.formLabel}>SKU *</label>
+                                                                <input
+                                                                    type="text"
+                                                                    required
+                                                                    placeholder="e.g. SR-YEL-01"
+                                                                    className={s.formInput}
+                                                                    value={variant.sku}
+                                                                    onChange={(e) => handleVariantChange(vIdx, 'sku', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className={s.formGroup}>
+                                                                <label className={s.formLabel}>Stock *</label>
+                                                                <input
+                                                                    type="number"
+                                                                    required
+                                                                    className={s.formInput}
+                                                                    value={variant.stock}
+                                                                    onChange={(e) => handleVariantChange(vIdx, 'stock', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className={s.formGroup}>
+                                                                <label className={s.formLabel}>Price (INR, optional)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Defaults to base price"
+                                                                    className={s.formInput}
+                                                                    value={variant.price}
+                                                                    onChange={(e) => handleVariantChange(vIdx, 'price', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className={s.formGroup}>
+                                                                <label className={s.formLabel}>Discount Price (INR, optional)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Defaults to base discount"
+                                                                    className={s.formInput}
+                                                                    value={variant.discount_price}
+                                                                    onChange={(e) => handleVariantChange(vIdx, 'discount_price', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Variant Photos */}
+                                                        <div style={{ marginTop: '1rem' }}>
+                                                            <label className={s.formLabel} style={{ fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block' }}>Variant Photos</label>
+                                                            <div className={s.imagesGrid}>
+                                                                {variant.images?.map(img => (
+                                                                    <div className={s.imgWrapper} key={img.id}>
+                                                                        <img src={img.image} alt="" className={s.gridImg} />
+                                                                        {img.is_main && <span className={s.mainBadge}>Main</span>}
+                                                                        <div className={s.imgOverlay}>
+                                                                            {!img.is_main && (
+                                                                                <button type="button" className={`${s.imgOverlayBtn} ${s.imgOverlayBtnMain}`} title="Set as Main" onClick={() => handleSetVariantExistingMainImage(vIdx, img.id)}>
+                                                                                    ✓
+                                                                                </button>
+                                                                            )}
+                                                                            <button type="button" className={s.imgOverlayBtn} title="Delete Image" onClick={() => handleDeleteVariantImage(vIdx, img.id)}>
+                                                                                ✕
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+
+                                                                {variant.localImages?.map((img, imgIdx) => (
+                                                                    <div className={s.imgWrapper} key={imgIdx}>
+                                                                        <img src={img.previewUrl} alt="" className={s.gridImg} />
+                                                                        {img.isMain && <span className={s.mainBadge}>Main</span>}
+                                                                        <div className={s.imgOverlay}>
+                                                                            {!img.isMain && (
+                                                                                <button type="button" className={`${s.imgOverlayBtn} ${s.imgOverlayBtnMain}`} title="Set as Main" onClick={() => handleSetVariantLocalMainImage(vIdx, imgIdx)}>
+                                                                                    ✓
+                                                                                </button>
+                                                                            )}
+                                                                            <button type="button" className={s.imgOverlayBtn} title="Remove Image" onClick={() => handleRemoveVariantLocalImage(vIdx, imgIdx)}>
+                                                                                ✕
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+
+                                                                <label className={s.uploadWrapper} style={{ height: '80px', width: '80px' }}>
+                                                                    <CameraIcon />
+                                                                    <span className={s.uploadText} style={{ fontSize: '0.65rem' }}>Upload</span>
+                                                                    <input 
+                                                                        type="file" 
+                                                                        accept="image/*" 
+                                                                        multiple 
+                                                                        className={s.uploadInput} 
+                                                                        onChange={(e) => handleVariantImageUpload(e, vIdx)} 
+                                                                    />
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Video Section */}

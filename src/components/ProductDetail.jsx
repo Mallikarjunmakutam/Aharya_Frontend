@@ -72,25 +72,51 @@ export default function ProductDetail({ product, onBack }) {
     }
   };
 
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  const getActivePrice = () => {
+    if (selectedVariant) {
+      const vPrice = selectedVariant.discount_price && parseFloat(selectedVariant.discount_price) > 0 
+        ? parseFloat(selectedVariant.discount_price) 
+        : parseFloat(selectedVariant.price);
+      if (vPrice && !isNaN(vPrice)) return vPrice;
+    }
+    return detailProduct?.discount_price && parseFloat(detailProduct.discount_price) > 0 
+      ? parseFloat(detailProduct.discount_price) 
+      : parseFloat(detailProduct?.price || 0);
+  };
+
+  const getActiveOriginalPrice = () => {
+    if (selectedVariant) {
+      const vPrice = selectedVariant.discount_price && parseFloat(selectedVariant.discount_price) > 0 
+        ? parseFloat(selectedVariant.price) 
+        : null;
+      if (vPrice !== null && !isNaN(vPrice)) return vPrice;
+    }
+    return detailProduct?.discount_price && parseFloat(detailProduct.discount_price) > 0 
+      ? parseFloat(detailProduct.price) 
+      : null;
+  };
+
   const p = detailProduct ? {
     id: detailProduct.id,
+    productId: detailProduct.id,
+    variantId: selectedVariant?.id || null,
     name: detailProduct.name,
     category: detailProduct.category?.name || 'Uncategorized',
-    price: detailProduct.discount_price && parseFloat(detailProduct.discount_price) > 0 
-      ? parseFloat(detailProduct.discount_price) 
-      : parseFloat(detailProduct.price),
-    originalPrice: detailProduct.discount_price && parseFloat(detailProduct.discount_price) > 0 
-      ? parseFloat(detailProduct.price) 
-      : null,
+    price: getActivePrice(),
+    originalPrice: getActiveOriginalPrice(),
     rating: parseFloat(detailProduct.rating) || 0,
     reviews: detailProduct.total_reviews || 0,
-    image: detailProduct.images?.find(img => img.is_main)?.image || detailProduct.images?.[0]?.image || '',
+    image: selectedVariant?.images?.find(img => img.is_main)?.image || selectedVariant?.images?.[0]?.image || detailProduct.images?.find(img => img.is_main)?.image || detailProduct.images?.[0]?.image || '',
     badge: detailProduct.is_featured ? 'Featured' : '',
     description: detailProduct.description,
-    colors: [],
-    item_code: detailProduct.item_code,
+    colors: detailProduct.variants || [],
+    item_code: selectedVariant ? selectedVariant.sku : detailProduct.item_code,
   } : {
     id: product?.id,
+    productId: product?.id,
+    variantId: null,
     name: product?.name || '',
     category: product?.category || '',
     price: product?.price || 0,
@@ -100,17 +126,36 @@ export default function ProductDetail({ product, onBack }) {
     image: product?.image || '',
     badge: product?.badge || '',
     description: product?.description || '',
-    colors: product?.colors || [],
+    colors: [],
     item_code: product?.item_code || '',
   };
 
-  const [selectedColor, setSelectedColor] = useState(p.colors?.[0] || null);
+  useEffect(() => {
+    if (detailProduct?.variants?.length > 0) {
+      setSelectedVariant(prev => {
+        const found = detailProduct.variants.find(v => v.id === prev?.id);
+        return found || detailProduct.variants[0];
+      });
+    } else {
+      setSelectedVariant(null);
+    }
+  }, [detailProduct]);
 
   useEffect(() => {
-    if (p.colors?.length > 0 && !selectedColor) {
-      setSelectedColor(p.colors[0]);
+    if (selectedVariant) {
+      const variantImages = selectedVariant.images || [];
+      const mainImgObj = variantImages.find(img => img.is_main) || variantImages[0];
+      if (mainImgObj) {
+        setActiveMedia({ type: 'image', url: mainImgObj.image });
+      } else {
+        const prodImages = detailProduct?.images || [];
+        const fallbackImg = prodImages.find(img => img.is_main) || prodImages[0];
+        if (fallbackImg) {
+          setActiveMedia({ type: 'image', url: fallbackImg.image });
+        }
+      }
     }
-  }, [p.colors, selectedColor]);
+  }, [selectedVariant]);
 
   const handleAdd = () => {
     addToCart(p, quantity);
@@ -119,12 +164,13 @@ export default function ProductDetail({ product, onBack }) {
   };
 
   const handleBuyNow = async () => {
+    const variantQuery = p.variantId ? `&variant_id=${p.variantId}` : '';
     if (!user) {
-      const target = encodeURIComponent(`/checkout?buynow=true&product_id=${p.id}&qty=${quantity}`);
+      const target = encodeURIComponent(`/checkout?buynow=true&product_id=${p.id}${variantQuery}&qty=${quantity}`);
       navigate(`/login?redirect=${target}`);
       return;
     }
-    navigate(`/checkout?buynow=true&product_id=${p.id}&qty=${quantity}`);
+    navigate(`/checkout?buynow=true&product_id=${p.id}${variantQuery}&qty=${quantity}`);
   };
 
   const disc = p.originalPrice && p.price 
@@ -299,7 +345,7 @@ export default function ProductDetail({ product, onBack }) {
                 <img src={p.image} className={s.thumbnailActive} alt="thumb" />
               ) : (
                 <>
-                  {detailProduct?.images?.map((img, idx) => (
+                  {((selectedVariant && selectedVariant.images?.length > 0) ? selectedVariant.images : (detailProduct?.images || [])).map((img, idx) => (
                     <img 
                       key={img.id || idx}
                       src={img.image} 
@@ -327,11 +373,29 @@ export default function ProductDetail({ product, onBack }) {
             <div className={s.category}>{detailProduct?.category?.name || p.category}</div>
             <h1 className={s.title}>{p.name}</h1>
             
-            <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <span className={s.itemCodeLabel}>Item Code:</span>
-              <span className={s.itemCodeVal} style={{ fontFamily: 'monospace', fontWeight: 'bold', background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: '4px' }}>
-                {detailProduct?.item_code || p.item_code || 'N/A'}
-              </span>
+            <div style={{ marginBottom: '1.2rem', display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <span className={s.itemCodeLabel}>Item Code:</span>
+                <span className={s.itemCodeVal} style={{ fontFamily: 'monospace', fontWeight: 'bold', background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: '4px' }}>
+                  {p.item_code || 'N/A'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <span className={s.itemCodeLabel}>Availability:</span>
+                {selectedVariant ? (
+                  selectedVariant.stock > 0 ? (
+                    <span style={{ color: 'green', fontWeight: 'bold', fontSize: '0.9rem' }}>In Stock ({selectedVariant.stock} available)</span>
+                  ) : (
+                    <span style={{ color: 'red', fontWeight: 'bold', fontSize: '0.9rem' }}>Out of Stock</span>
+                  )
+                ) : (
+                  (detailProduct?.stock || 0) > 0 ? (
+                    <span style={{ color: 'green', fontWeight: 'bold', fontSize: '0.9rem' }}>In Stock ({detailProduct.stock} available)</span>
+                  ) : (
+                    <span style={{ color: 'red', fontWeight: 'bold', fontSize: '0.9rem' }}>Out of Stock</span>
+                  )
+                )}
+              </div>
             </div>
 
             <div className={s.ratingRow}>
@@ -363,17 +427,29 @@ export default function ProductDetail({ product, onBack }) {
             <div className={s.divider} />
 
             {/* Colors */}
-            {p.colors?.length > 0 && (
-              <div className={s.colorSelection}>
-                <div className={s.sectionTitle}>Select Color</div>
-                <div className={s.colorsList}>
-                  {p.colors.map(c => (
+            {detailProduct?.variants?.length > 0 && (
+              <div className={s.colorSelection} style={{ marginBottom: '1.5rem' }}>
+                <div className={s.sectionTitle} style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '8px' }}>
+                  Color: <span style={{ color: 'var(--color-primary, #a855f7)', fontWeight: 'bold' }}>{selectedVariant?.color_name || ''}</span>
+                </div>
+                <div className={s.colorsList} style={{ display: 'flex', gap: '10px' }}>
+                  {detailProduct.variants.map(v => (
                     <button
-                      key={c}
-                      className={`${s.colorBtn} ${selectedColor === c ? s.colorActive : ''}`}
-                      style={{ backgroundColor: c }}
-                      onClick={() => setSelectedColor(c)}
-                      aria-label="Select color"
+                      key={v.id}
+                      className={`${s.colorBtn} ${selectedVariant?.id === v.id ? s.colorActive : ''}`}
+                      style={{ 
+                        backgroundColor: v.color_code || '#ccc',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        border: selectedVariant?.id === v.id ? '2px solid black' : '1px solid #ddd',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: selectedVariant?.id === v.id ? '0 0 8px rgba(0,0,0,0.2)' : 'none'
+                      }}
+                      onClick={() => setSelectedVariant(v)}
+                      title={v.color_name}
+                      aria-label={`Select color ${v.color_name}`}
                     />
                   ))}
                 </div>
@@ -395,13 +471,25 @@ export default function ProductDetail({ product, onBack }) {
               <button 
                 className={`${s.addCartBtn} ${added ? s.addedBtn : ''}`} 
                 onClick={handleAdd}
+                disabled={selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0}
+                style={{ 
+                  opacity: (selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0) ? 0.6 : 1,
+                  cursor: (selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0) ? 'not-allowed' : 'pointer'
+                }}
               >
-                {added ? <><CheckIcon /> Added to Cart</> : 'Add to Cart'}
+                {(selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0) 
+                  ? 'Out of Stock' 
+                  : (added ? <><CheckIcon /> Added to Cart</> : 'Add to Cart')}
               </button>
               
               <button 
                 className={s.buyNowBtn} 
                 onClick={handleBuyNow}
+                disabled={selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0}
+                style={{ 
+                  opacity: (selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0) ? 0.6 : 1,
+                  cursor: (selectedVariant ? selectedVariant.stock <= 0 : (detailProduct?.stock || 0) <= 0) ? 'not-allowed' : 'pointer'
+                }}
               >
                 Buy Now
               </button>

@@ -29,24 +29,48 @@ export function CartProvider({ children }) {
       const res = await api.get('/cart/');
       const data = res.data.results || res.data;
       if (data && data.length > 0) {
-        // Map backend CartItem structure to frontend structure
-        const items = data[0].items.map(item => ({
-          id: item.product.id,
-          name: item.product.name,
-          category: item.product.category?.name || 'Uncategorized',
-          price: item.product.discount_price && parseFloat(item.product.discount_price) > 0 
-            ? parseFloat(item.product.discount_price) 
-            : parseFloat(item.product.price),
-          originalPrice: item.product.discount_price && parseFloat(item.product.discount_price) > 0 
-            ? parseFloat(item.product.price) 
-            : null,
-          rating: parseFloat(item.product.rating) || 0,
-          reviews: item.product.total_reviews || 0,
-          image: item.product.main_image,
-          badge: item.product.is_featured ? 'Featured' : '',
-          item_code: item.product.item_code,
-          qty: item.quantity
-        }));
+        const items = data[0].items.map(item => {
+          const product = item.product;
+          const variant = item.variant;
+          
+          const variantPrice = variant 
+            ? (variant.discount_price && parseFloat(variant.discount_price) > 0 ? parseFloat(variant.discount_price) : parseFloat(variant.price)) 
+            : null;
+          const basePrice = product.discount_price && parseFloat(product.discount_price) > 0 
+            ? parseFloat(product.discount_price) 
+            : parseFloat(product.price);
+          const price = variantPrice !== null && !isNaN(variantPrice) ? variantPrice : basePrice;
+
+          const variantOrig = variant 
+            ? (variant.discount_price && parseFloat(variant.discount_price) > 0 ? parseFloat(variant.price) : null)
+            : null;
+          const baseOrig = product.discount_price && parseFloat(product.discount_price) > 0 
+            ? parseFloat(product.price) 
+            : null;
+          const originalPrice = variantOrig !== null ? variantOrig : baseOrig;
+
+          const varImage = variant?.images?.find(img => img.is_main)?.image || variant?.images?.[0]?.image;
+          const image = varImage || product.main_image;
+
+          const item_code = variant?.sku || product.item_code;
+          const colorName = variant?.color_name || '';
+          
+          return {
+            id: variant?.id || product.id,
+            productId: product.id,
+            variantId: variant?.id || null,
+            name: product.name + (colorName ? ` - ${colorName}` : ''),
+            category: product.category?.name || 'Uncategorized',
+            price,
+            originalPrice,
+            rating: parseFloat(product.rating) || 0,
+            reviews: product.total_reviews || 0,
+            image,
+            badge: product.is_featured ? 'Featured' : '',
+            item_code,
+            qty: item.quantity
+          };
+        });
         setCartItems(items);
       } else {
         setCartItems([]);
@@ -91,13 +115,16 @@ export function CartProvider({ children }) {
 
   const addToCart = async (product, quantity = 1) => {
     if (!user) {
-      // Fallback for non-logged in (or force login)
       alert("Please login to add to cart");
       return;
     }
     const qty = typeof quantity === 'number' ? quantity : (product.quantity || 1);
     try {
-      await api.post('/cart/add-item/', { product_id: product.id, quantity: qty });
+      await api.post('/cart/add-item/', { 
+        product_id: product.productId || product.id,
+        variant_id: product.variantId || null,
+        quantity: qty 
+      });
       fetchCart();
     } catch (e) {
       console.error('Error adding to cart', e);
@@ -107,7 +134,14 @@ export function CartProvider({ children }) {
   const removeFromCart = async (id) => {
     if (!user) return;
     try {
-      await api.post('/cart/remove-item/', { product_id: id });
+      const item = cartItems.find(i => i.id === id);
+      const payload = {};
+      if (item && item.variantId) {
+        payload.variant_id = item.variantId;
+      } else {
+        payload.product_id = id;
+      }
+      await api.post('/cart/remove-item/', payload);
       fetchCart();
     } catch (e) {
       console.error('Error removing from cart', e);
