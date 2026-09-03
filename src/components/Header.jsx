@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import api from '../services/api';
 import LoginModal from './LoginModal';
 import s from './Header.module.css';
 
@@ -63,12 +64,16 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
   const [scrolled, setScrolled] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
   const [searchVal, setSearchVal] = useState(searchQueryParam);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
+  const headerSearchRef = useRef(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -79,18 +84,44 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
   useEffect(() => {
     const handleClick = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setShowUserMenu(false);
+      if (headerSearchRef.current && !headerSearchRef.current.contains(e.target)) setShowSuggestions(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   useEffect(() => {
-    if (showSearch && searchRef.current) searchRef.current.focus();
+    if (showSearch) {
+      setTimeout(() => searchRef.current?.focus(), 50);
+    }
   }, [showSearch]);
 
   useEffect(() => {
     setSearchVal(searchQueryParam);
   }, [searchQueryParam]);
+
+  // Live search debounced fetch
+  useEffect(() => {
+    if (!searchVal.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/products/', { params: { search: searchVal.trim(), page_size: 6 } });
+        setSearchResults(res.data.results || res.data || []);
+      } catch (err) {
+        console.error("Live search failed", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchVal]);
 
   const handleCategoryClick = (category) => {
     if (location.pathname !== '/shop') {
@@ -117,18 +148,29 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
     }
   };
 
-  const handleSearch = (e) => {
-    const val = e.target.value;
-    setSearchVal(val);
-    if (location.pathname !== '/shop') {
-      const params = {};
-      if (val) params.search = val;
-      if (activeCategory && activeCategory !== 'All') params.category = activeCategory;
-      const queryStr = new URLSearchParams(params).toString();
-      navigate(`/shop?${queryStr}`);
-    } else {
+  const handleSearchChange = (e) => {
+    setSearchVal(e.target.value);
+  };
+
+  const handleExecuteSearch = (e) => {
+    if (e) e.preventDefault();
+    const query = searchVal.trim();
+    setShowSearch(false);
+    
+    const params = {};
+    if (query) params.search = query;
+    if (activeCategory && activeCategory !== 'All') params.category = activeCategory;
+    const queryStr = new URLSearchParams(params).toString();
+    navigate(`/shop${queryStr ? `?${queryStr}` : ''}`);
+  };
+
+  const handleClearSearchInput = (e) => {
+    e?.stopPropagation();
+    setSearchVal('');
+    setSearchResults([]);
+    searchRef.current?.focus();
+    if (location.pathname === '/shop') {
       const nextParams = {};
-      if (val) nextParams.search = val;
       if (activeCategory && activeCategory !== 'All') nextParams.category = activeCategory;
       setSearchParams(nextParams);
     }
@@ -136,12 +178,11 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
 
   const handleCloseSearch = () => {
     setShowSearch(false);
-    setSearchVal('');
-    if (location.pathname === '/shop') {
-      const nextParams = {};
-      if (activeCategory && activeCategory !== 'All') nextParams.category = activeCategory;
-      setSearchParams(nextParams);
-    }
+  };
+
+  const handleSelectSearchResult = (product) => {
+    setShowSearch(false);
+    navigate(`/product/${product.slug}`);
   };
 
   const initials = user?.name ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '';
@@ -177,7 +218,98 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
               About Us
             </button>
 
-            <button id="header-search-btn" className={s.iconBtn} onClick={() => setShowSearch(true)} aria-label="Search">
+            {/* Desktop / Tablet Inline Search Bar */}
+            <div className={s.headerSearchWrapper} ref={headerSearchRef}>
+              <form onSubmit={handleExecuteSearch} className={s.headerSearchForm}>
+                <button type="submit" className={s.headerSearchBtn} aria-label="Search">
+                  <SearchIcon />
+                </button>
+                <input
+                  type="text"
+                  className={s.headerSearchInput}
+                  placeholder="Search sarees, fabrics..."
+                  value={searchVal}
+                  onChange={(e) => {
+                    handleSearchChange(e);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  id="main-header-search-input"
+                  autoComplete="off"
+                />
+                {searchVal && (
+                  <button 
+                    type="button" 
+                    className={s.headerSearchClear} 
+                    onClick={handleClearSearchInput}
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </form>
+
+              {/* Autocomplete Suggestions Dropdown */}
+              {showSuggestions && searchVal.trim() && (
+                <div className={s.headerSuggestionsDropdown}>
+                  {isSearching ? (
+                    <div className={s.headerSearchLoading}>
+                      <span className={s.searchSpinner} /> Searching...
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <div className={s.headerResultsList}>
+                      {searchResults.map((product) => {
+                        const price = product.discount_price && parseFloat(product.discount_price) > 0 
+                          ? parseFloat(product.discount_price) 
+                          : parseFloat(product.price);
+                        return (
+                          <div 
+                            key={product.id} 
+                            className={s.headerResultItem}
+                            onClick={() => {
+                              setShowSuggestions(false);
+                              handleSelectSearchResult(product);
+                            }}
+                          >
+                            <img 
+                              src={product.main_image || '/assets/logo.jpg'} 
+                              alt={product.name} 
+                              className={s.headerResultThumb}
+                              onError={(e) => { e.target.src = '/assets/logo.jpg'; }}
+                            />
+                            <div className={s.headerResultDetails}>
+                              <div className={s.headerResultName}>{product.name}</div>
+                              <div className={s.headerResultMeta}>
+                                <span>{product.category?.name || 'Saree'}</span>
+                                {product.fabric && <span>• {product.fabric}</span>}
+                              </div>
+                            </div>
+                            <div className={s.headerResultPrice}>₹{price.toLocaleString('en-IN')}</div>
+                          </div>
+                        );
+                      })}
+                      <button 
+                        type="button" 
+                        className={s.headerViewAllBtn}
+                        onClick={(e) => {
+                          setShowSuggestions(false);
+                          handleExecuteSearch(e);
+                        }}
+                      >
+                        View all results for "{searchVal.trim()}" →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={s.headerNoResults}>
+                      No sarees found matching "<strong>{searchVal}</strong>"
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Icon Search Button (falls back to overlay on small screens) */}
+            <button id="header-search-btn" className={`${s.iconBtn} ${s.mobileSearchBtn}`} onClick={() => setShowSearch(true)} aria-label="Search">
               <SearchIcon />
             </button>
 
@@ -257,23 +389,113 @@ export default function Header({ onSearch, setViewMode, activeCategory: activeCa
             onClick={(e) => e.target === e.currentTarget && handleCloseSearch()}
           >
             <motion.div
-              className={s.searchBox}
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              className={s.searchContainer}
+              initial={{ opacity: 0, y: -20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             >
-              <SearchIcon />
-              <input
-                ref={searchRef}
-                className={s.searchInput}
-                placeholder="Search sarees, fabrics, occasions…"
-                value={searchVal}
-                onChange={handleSearch}
-                id="header-search-input"
-              />
-              <button className={s.searchClose} onClick={handleCloseSearch} aria-label="Close search">
-                <CloseIcon />
-              </button>
+              <form onSubmit={handleExecuteSearch} className={s.searchBox}>
+                <button type="submit" className={s.searchSubmitBtn} aria-label="Search">
+                  <SearchIcon />
+                </button>
+                <input
+                  ref={searchRef}
+                  className={s.searchInput}
+                  placeholder="Search by saree name, fabric (Silk, Banarasi), item code..."
+                  value={searchVal}
+                  onChange={handleSearchChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') handleCloseSearch();
+                  }}
+                  id="header-search-input"
+                  autoComplete="off"
+                />
+                {searchVal && (
+                  <button 
+                    type="button" 
+                    className={s.searchClearBtn} 
+                    onClick={handleClearSearchInput}
+                    aria-label="Clear input"
+                  >
+                    ✕
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  className={s.searchClose} 
+                  onClick={handleCloseSearch} 
+                  aria-label="Close search"
+                >
+                  <CloseIcon />
+                </button>
+              </form>
+
+              {/* Live Search Suggestions Dropdown */}
+              {searchVal.trim() && (
+                <div className={s.searchResultsDropdown}>
+                  {isSearching ? (
+                    <div className={s.searchLoading}>
+                      <span className={s.searchSpinner} /> Searching catalogue...
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <div className={s.resultsList}>
+                      <div className={s.resultsHeader}>
+                        <span>Matching Products ({searchResults.length})</span>
+                      </div>
+                      {searchResults.map((product) => {
+                        const price = product.discount_price && parseFloat(product.discount_price) > 0 
+                          ? parseFloat(product.discount_price) 
+                          : parseFloat(product.price);
+                        const origPrice = product.discount_price && parseFloat(product.discount_price) > 0 
+                          ? parseFloat(product.price) 
+                          : null;
+
+                        return (
+                          <div 
+                            key={product.id} 
+                            className={s.resultItem}
+                            onClick={() => handleSelectSearchResult(product)}
+                          >
+                            <img 
+                              src={product.main_image || '/assets/logo.jpg'} 
+                              alt={product.name} 
+                              className={s.resultThumb}
+                              onError={(e) => { e.target.src = '/assets/logo.jpg'; }}
+                            />
+                            <div className={s.resultInfo}>
+                              <div className={s.resultName}>{product.name}</div>
+                              <div className={s.resultMeta}>
+                                <span className={s.resultTag}>{product.category?.name || 'Saree'}</span>
+                                {product.fabric && <span className={s.resultFabric}>• {product.fabric}</span>}
+                                {product.item_code && <span className={s.resultCode}>• {product.item_code}</span>}
+                              </div>
+                            </div>
+                            <div className={s.resultPriceBlock}>
+                              <span className={s.resultPrice}>₹{price.toLocaleString('en-IN')}</span>
+                              {origPrice && (
+                                <span className={s.resultOrigPrice}>₹{origPrice.toLocaleString('en-IN')}</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <button 
+                        type="button" 
+                        className={s.viewAllResultsBtn}
+                        onClick={handleExecuteSearch}
+                      >
+                        View all results for "{searchVal.trim()}" →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={s.noResultsBox}>
+                      <p>No sarees found matching "<strong>{searchVal}</strong>"</p>
+                      <span>Try searching for fabrics like "Silk", "Banarasi", "Cotton" or item codes</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

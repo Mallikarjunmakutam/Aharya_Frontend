@@ -316,10 +316,11 @@ export default function SuperuserDashboard({ setViewMode }) {
             setVideoFile(null);
         } else {
             setEditingProduct(null);
+            const defaultCategoryId = categories.length > 0 ? categories[0].id : '';
             setProductForm({
                 name: '',
                 item_code: '',
-                category_id: categories[0]?.id || '',
+                category_id: defaultCategoryId,
                 fabric: '',
                 price: '',
                 discount_price: '',
@@ -327,7 +328,18 @@ export default function SuperuserDashboard({ setViewMode }) {
                 description: '',
                 is_featured: false,
                 is_active: true,
-                variants: []
+                variants: [
+                    {
+                        color_name: 'Original',
+                        color_code: '#c8a84b',
+                        price: '',
+                        discount_price: '',
+                        stock: 0,
+                        sku: '',
+                        images: [],
+                        localImages: []
+                    }
+                ]
             });
             setProductImages([]);
             setSelectedLocalImages([]);
@@ -337,15 +349,41 @@ export default function SuperuserDashboard({ setViewMode }) {
         setShowProductModal(true);
     };
 
+    // Helper to format backend errors
+    const formatErrorResponse = (data) => {
+        if (!data) return "Failed to save product";
+        if (typeof data === 'string') return data;
+        if (Array.isArray(data)) return data.map(formatErrorResponse).join(', ');
+        if (typeof data === 'object') {
+            return Object.entries(data)
+                .map(([field, err]) => `${field}: ${formatErrorResponse(err)}`)
+                .join('\n');
+        }
+        return String(data);
+    };
+
     // Save Product (Create or Edit)
     const handleSaveProduct = async (e) => {
         e.preventDefault();
         try {
-            const variantsPayload = productForm.variants.map(v => {
+            // Auto-generate SKUs or sync with main product if needed
+            let processedVariants = productForm.variants;
+            if (!processedVariants || processedVariants.length === 0) {
+                processedVariants = [{
+                    color_name: 'Original',
+                    color_code: '#c8a84b',
+                    sku: productForm.item_code || `SKU-${Date.now()}`,
+                    stock: parseInt(productForm.stock, 10) || 0,
+                    price: parseFloat(productForm.price) || null,
+                    discount_price: productForm.discount_price ? parseFloat(productForm.discount_price) : null
+                }];
+            }
+
+            const variantsPayload = processedVariants.map((v, idx) => {
                 const parsed = {
-                    color_name: v.color_name,
-                    color_code: v.color_code,
-                    sku: v.sku,
+                    color_name: v.color_name || 'Original',
+                    color_code: v.color_code || '#c8a84b',
+                    sku: v.sku?.trim() || `${productForm.item_code || 'SKU'}-${idx + 1}`,
                     stock: parseInt(v.stock, 10) || 0,
                     price: v.price ? parseFloat(v.price) : null,
                     discount_price: v.discount_price ? parseFloat(v.discount_price) : null
@@ -356,15 +394,17 @@ export default function SuperuserDashboard({ setViewMode }) {
                 return parsed;
             });
 
+            const chosenCategory = productForm.category_id || (categories.length > 0 ? categories[0].id : null);
+
             const data = {
-                name: productForm.name,
-                item_code: productForm.item_code,
-                category_id: productForm.category_id,
-                fabric: productForm.fabric,
+                name: productForm.name.trim(),
+                item_code: productForm.item_code.trim(),
+                category_id: chosenCategory || null,
+                fabric: productForm.fabric.trim(),
                 price: parseFloat(productForm.price),
                 discount_price: productForm.discount_price ? parseFloat(productForm.discount_price) : null,
                 stock: parseInt(productForm.stock, 10) || 0,
-                description: productForm.description,
+                description: productForm.description.trim(),
                 is_featured: productForm.is_featured,
                 is_active: productForm.is_active,
                 variants: variantsPayload
@@ -398,7 +438,7 @@ export default function SuperuserDashboard({ setViewMode }) {
             for (let i = 0; i < productForm.variants.length; i++) {
                 const localVar = productForm.variants[i];
                 if (localVar.localImages && localVar.localImages.length > 0) {
-                    const savedVar = createdProduct.variants.find(v => v.sku === localVar.sku) || createdProduct.variants[i];
+                    const savedVar = createdProduct.variants?.find(v => v.sku === localVar.sku) || createdProduct.variants?.[i];
                     if (savedVar) {
                         for (const img of localVar.localImages) {
                             const formData = new FormData();
@@ -424,7 +464,8 @@ export default function SuperuserDashboard({ setViewMode }) {
             fetchProducts();
         } catch (e) {
             console.error("Failed to save product", e);
-            alert(e.response?.data ? Object.values(e.response.data).flat().join(', ') : "Failed to save product");
+            const errMsg = formatErrorResponse(e.response?.data) || e.message || "Failed to save product";
+            alert(errMsg);
         }
     };
 
@@ -617,10 +658,16 @@ export default function SuperuserDashboard({ setViewMode }) {
     });
 
     const filteredProducts = products.filter(product => {
-        const matchesSearch =
-            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.item_code?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = categoryFilter === 'All' || product.category?.slug === categoryFilter;
+        const q = searchQuery.toLowerCase().trim();
+        const matchesSearch = !q ||
+            product.name?.toLowerCase().includes(q) ||
+            product.item_code?.toLowerCase().includes(q) ||
+            product.fabric?.toLowerCase().includes(q) ||
+            product.category?.name?.toLowerCase().includes(q);
+        const matchesCategory = categoryFilter === 'All' || 
+            product.category?.slug === categoryFilter || 
+            product.category?.name === categoryFilter ||
+            product.category?.id === categoryFilter;
         return matchesSearch && matchesCategory;
     });
 

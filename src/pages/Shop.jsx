@@ -17,7 +17,17 @@ export default function Shop() {
     if (searchQuery) {
       params.search = searchQuery;
     }
-    // Changing filters resets the page back to 1
+    setSearchParams(params);
+  };
+
+  const handleSetSearchQuery = (query) => {
+    const params = {};
+    if (activeCategory && activeCategory !== 'All') {
+      params.category = activeCategory;
+    }
+    if (query && query.trim()) {
+      params.search = query.trim();
+    }
     setSearchParams(params);
   };
 
@@ -42,6 +52,7 @@ export default function Shop() {
   return (
     <ProductSection
       searchQuery={searchQuery}
+      setSearchQuery={handleSetSearchQuery}
       activeCategory={activeCategory}
       setActiveCategory={handleSetActiveCategory}
       currentPage={currentPage}

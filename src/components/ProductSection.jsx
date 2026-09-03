@@ -114,6 +114,7 @@ function ProductCard({ product, searchQuery, onSelectProduct }) {
 
 export default function ProductSection({
   searchQuery = '',
+  setSearchQuery,
   activeCategory = 'All',
   setActiveCategory,
   currentPage: propCurrentPage,
@@ -125,9 +126,15 @@ export default function ProductSection({
   const [loading, setLoading] = useState(true);
   const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [searchInput, setSearchInput] = useState(searchQuery);
 
   const currentPage = propCurrentPage !== undefined ? propCurrentPage : localCurrentPage;
   const setCurrentPage = propSetCurrentPage !== undefined ? propSetCurrentPage : setLocalCurrentPage;
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
 
   // Reset page when search or category changes (only when using local state)
   useEffect(() => {
@@ -135,6 +142,16 @@ export default function ProductSection({
       setLocalCurrentPage(1);
     }
   }, [activeCategory, searchQuery, propCurrentPage]);
+
+  // Debounce search input to parent query updater
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (setSearchQuery && searchInput !== searchQuery) {
+        setSearchQuery(searchInput);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, searchQuery, setSearchQuery]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -170,6 +187,7 @@ export default function ProductSection({
           image: p.main_image,
           badge: p.is_featured ? 'Featured' : '',
           item_code: p.item_code,
+          fabric: p.fabric,
           colors: [] 
         }));
 
@@ -177,6 +195,7 @@ export default function ProductSection({
 
         // Calculate pages based on DRF count field
         const count = prodRes.data.count || fetchedProducts.length;
+        setTotalCount(count);
         setTotalPages(Math.ceil(count / 10) || 1);
 
         const fetchedCategories = ["All", ...(catRes.data.results || catRes.data).map(c => c.name)];
@@ -191,6 +210,11 @@ export default function ProductSection({
   }, [activeCategory, searchQuery, currentPage]);
 
   const filtered = products;
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    if (setSearchQuery) setSearchQuery('');
+  };
 
   return (
     <section id="products" className={s.section}>
@@ -210,6 +234,41 @@ export default function ProductSection({
             Hand-picked sarees from master weavers across India — timeless, elegant, exclusively yours.
           </p>
         </motion.div>
+
+        {/* Search Bar */}
+        <div className={s.searchRow}>
+          <span className={s.searchIcon}><SearchIcon /></span>
+          <input
+            type="text"
+            className={s.searchInput}
+            placeholder="Search catalog by saree name, fabric, style..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            id="catalog-search-input"
+          />
+          {searchInput && (
+            <button 
+              className={s.clearBtn} 
+              onClick={handleClearSearch}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Active Search & Filter Banner */}
+        {searchQuery && (
+          <div className={s.activeSearchBanner}>
+            <span>
+              Showing results for "<strong>{searchQuery}</strong>" ({totalCount} {totalCount === 1 ? 'saree' : 'sarees'})
+            </span>
+            <button className={s.clearFilterBtn} onClick={handleClearSearch}>
+              Clear Search
+            </button>
+          </div>
+        )}
 
         {/* Filter */}
         <div className={s.filterBar}>
